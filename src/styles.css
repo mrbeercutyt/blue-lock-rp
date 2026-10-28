@@ -28,3 +28,5 @@
 
 /* Tactical board interaction refinements */
 .pitch-grid .zone-label{font:2.4px Inter,sans-serif;fill:#f0f8ed;stroke:#183020;stroke-width:.45px;paint-order:stroke;opacity:.9;pointer-events:none}.ring.ball-ring{stroke:#d8dfd5;stroke-width:.45}.disc.ball-disc{fill:#f4f2d9;stroke:#252b24;stroke-width:.3}.pitch{transition:width .12s ease,transform .08s linear;max-width:none}.pitch-wrap{overflow:hidden;touch-action:pan-y}
+
+.position-editor{display:flex;flex-direction:column;gap:7px;margin-top:14px;padding:11px;background:#1b221c;border:1px solid var(--line);border-radius:5px}.position-editor label{font-size:8px;letter-spacing:1px;color:#9baa9b}.position-editor select{width:100%;min-width:0;background:#101510;color:#dce5dc;border:1px solid #3d4c3d;border-radius:4px;padding:9px;font:10px Inter,sans-serif}.position-editor select:disabled{opacity:.65}.position-editor small{font-size:8px;color:#829083;line-height:1.45}
