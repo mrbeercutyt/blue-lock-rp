@@ -72,6 +72,30 @@ Deno.serve(async (req: Request) => {
     .select('indicator_id,owner_id,name').eq('indicator_id', indicatorId).maybeSingle();
   if (matchError) return json({ error: 'Database error' }, 500);
 
+  if (action === 'create_match') {
+    if (!userId) return json({ error: 'Sign-in required' }, 401);
+    if (match) return json({ error: 'Match already exists' }, 409);
+    const incoming = body?.board;
+    if (!incoming || !Array.isArray(incoming.players) || !incoming.ball || !Array.isArray(incoming.paths)) return json({ error: 'Invalid board payload' }, 400);
+    const safe = {
+      players: incoming.players.map((p: any) => ({ id:p.id, name:p.name, number:p.number, team:p.team, x:p.x, y:p.y, role:p.role })),
+      ball: incoming.ball,
+      paths: incoming.paths,
+    };
+    const { error: createError } = await admin.from('match_boards').insert({
+      indicator_id: indicatorId,
+      name: typeof body.name === 'string' ? body.name.slice(0,120) : 'Матч',
+      board: safe,
+      owner_id: userId,
+    });
+    if (createError) return json({ error: 'Could not create match' }, 500);
+    const { error: publicError } = await admin.from('match_public_boards').upsert({
+      indicator_id: indicatorId, board: safe, updated_at: new Date().toISOString(),
+    }, { onConflict: 'indicator_id' });
+    if (publicError) return json({ error: 'Could not initialize public board' }, 500);
+    return json({ ok: true, board: safe });
+  }
+
   // Anyone with the link can read only the public tactical positions, never player stats.
   if (action === 'read_public') {
     if (!match) return json({ error: 'Match not found' }, 404);
