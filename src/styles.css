@@ -25,3 +25,6 @@
 .discord-auth:disabled{opacity:.65;cursor:wait}
 .pitch{height:auto;max-height:none}
 @media(max-width:680px){.discord-auth{min-height:32px;padding:0 9px;font-size:9px}}
+
+/* Tactical board interaction refinements */
+.pitch-grid .zone-label{font:2.4px Inter,sans-serif;fill:#f0f8ed;stroke:#183020;stroke-width:.45px;paint-order:stroke;opacity:.9;pointer-events:none}.ring.ball-ring{stroke:#d8dfd5;stroke-width:.45}.disc.ball-disc{fill:#f4f2d9;stroke:#252b24;stroke-width:.3}.pitch{transition:width .12s ease,transform .08s linear;max-width:none}.pitch-wrap{overflow:hidden;touch-action:pan-y}
