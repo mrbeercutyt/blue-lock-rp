@@ -7,6 +7,17 @@ const cors = {
   'Content-Type': 'application/json',
 };
 
+function sanitizeArena(value: any) {
+  const allowedThemes = ['classic', 'night', 'blue', 'sand', 'stadium'];
+  const width = Number(value?.fieldWidth);
+  const height = Number(value?.fieldHeight);
+  return {
+    theme: allowedThemes.includes(value?.theme) ? value.theme : 'classic',
+    fieldWidth: Number.isFinite(width) && width >= 20 && width <= 200 ? width : 68,
+    fieldHeight: Number.isFinite(height) && height >= 20 && height <= 200 ? height : 105,
+  };
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: cors });
 }
@@ -81,6 +92,7 @@ Deno.serve(async (req: Request) => {
       players: incoming.players.map((p: any) => ({ id:p.id, name:p.name, number:p.number, team:p.team, x:p.x, y:p.y, role:p.role })),
       ball: incoming.ball,
       paths: incoming.paths,
+      arena: sanitizeArena(incoming.arena),
     };
     const { error: createError } = await admin.from('match_boards').insert({
       indicator_id: indicatorId,
@@ -102,7 +114,7 @@ Deno.serve(async (req: Request) => {
     const { data, error } = await admin.from('match_public_boards').select('board')
       .eq('indicator_id', indicatorId).maybeSingle();
     if (error) return json({ error: 'Database error' }, 500);
-    if (data) return json({ board: data.board });
+    if (data) return json({ board: { ...data.board, arena: sanitizeArena(data.board?.arena) } });
     // Backward-compatible bootstrap: remove every private stat field from the legacy board.
     const { data: legacy } = await admin.from('match_boards').select('board').eq('indicator_id', indicatorId).maybeSingle();
     const old = legacy?.board;
@@ -111,6 +123,7 @@ Deno.serve(async (req: Request) => {
       players: old.players.map((p: any) => ({ id:p.id, name:p.name, number:p.number, team:p.team, x:p.x, y:p.y, role:p.role })),
       ball: old.ball ?? {x:50,y:62},
       paths: Array.isArray(old.paths) ? old.paths : [],
+      arena: sanitizeArena(old.arena),
     };
     return json({ board: safe });
   }
@@ -133,6 +146,7 @@ Deno.serve(async (req: Request) => {
       players: board.players.map((p: any) => ({ id:p.id, name:p.name, number:p.number, team:p.team, x:p.x, y:p.y, role:p.role })),
       ball: board.ball,
       paths: board.paths,
+      arena: sanitizeArena(board.arena),
     };
     const { error } = await admin.from('match_public_boards').upsert({
       indicator_id: indicatorId, board: safe, updated_at: new Date().toISOString(),
