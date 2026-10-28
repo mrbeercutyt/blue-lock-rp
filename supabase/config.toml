@@ -1,0 +1,2 @@
+[functions.match-data]
+verify_jwt = false
