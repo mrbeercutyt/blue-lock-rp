@@ -14,6 +14,18 @@
 - Индикатор матча с ID и ссылкой для подключения.
 - Теневая копия: позиции игроков и мяча зеркалятся с исходного матча, а линии на копии остаются независимыми для обсуждения тактики.
 
+## Supabase и Discord (первичная настройка)
+
+1. Создайте проект в Supabase и примените SQL-миграцию `supabase/migrations/202610280001_initial_schema.sql` через SQL Editor.
+2. В Supabase Dashboard → Authentication → Providers включите Discord OAuth и укажите Discord OAuth Client ID/Secret. В Discord Developer Portal добавьте Callback URL, который покажет Supabase для этого провайдера.
+3. В настройках Cloudflare Pages задайте `VITE_SUPABASE_URL` и `VITE_SUPABASE_ANON_KEY` из Supabase (это публичный ключ, защищённый RLS). Не используйте service-role key во frontend.
+4. В Supabase Dashboard → Edge Functions разверните `supabase/functions/verify-discord-role/index.ts`. Задайте серверные secrets: `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_ALLOWED_ROLE_IDS` (ID ролей через запятую). Discord-бот должен состоять на нужном сервере и иметь доступ к данным участников.
+5. Добавьте URL сайта в Supabase Authentication → URL Configuration → Redirect URLs. Для локальной разработки добавьте `http://localhost:5173/**`.
+
+Discord OAuth подтверждает личность аккаунта, но сам по себе не проверяет роли на сервере. Роли необходимо проверять серверной Edge Function; токен бота никогда не помещается в `VITE_*` переменные.
+
+Текущий этап добавляет клиент Supabase, кнопку OAuth-входа и начальную схему базы. Синхронизация досок через realtime и использование проверки ролей для разграничения действий — следующий этап после настройки проекта и секретов.
+
 ## Пока не реализовано
 - Общая realtime-база для синхронизации через интернет между разными пользователями и устройствами.
 - Discord OAuth и проверка ролей.
