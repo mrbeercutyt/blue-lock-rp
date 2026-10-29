@@ -366,6 +366,7 @@ Deno.serve(async (req: Request) => {
 
   if (action === 'set_participant_character') {
     if (!userId) return json({ error: 'Sign-in required' }, 401);
+    const isOwner = match?.owner_id === userId;
     const { data: me } = await admin.from('match_participants').select('match_role')
       .eq('indicator_id', indicatorId).eq('user_id', userId).maybeSingle();
     if (!isOwner && me?.match_role !== 'gm') return json({ error: 'Only the match creator or a GM can link characters' }, 403);
