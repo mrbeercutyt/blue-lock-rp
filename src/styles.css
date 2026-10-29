@@ -70,3 +70,7 @@
 .open-character-card{width:100%;margin:8px 0 14px;padding:10px;border:1px solid #526b3d;border-radius:5px;background:#263b1d;color:var(--green);font-size:11px;font-weight:700}
 
 .bookmark-avatar{width:28px;height:28px;object-fit:cover;border-radius:50%;margin-left:auto;border:1px solid var(--line)}
+
+.participant-character-link{display:grid;gap:5px;margin-top:8px;font-size:10px;color:var(--muted)}
+.participant-character-link select{width:100%;max-width:260px;padding:7px;background:#101510;border:1px solid var(--line);border-radius:4px;color:#e9eee9;font-size:11px}
+@media(max-width:640px){.participant-character-link select{max-width:100%}.person-row{min-width:0;overflow-wrap:anywhere}}
