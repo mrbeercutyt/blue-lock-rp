@@ -164,6 +164,61 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  if (action === 'sync_participant') {
+    if (!userId) return json({ error: 'Sign-in required' }, 401);
+    if (!match) return json({ error: 'Match not found' }, 404);
+    const { data: existing } = await admin.from('match_participants')
+      .select('match_role,team').eq('indicator_id', indicatorId).eq('user_id', userId).maybeSingle();
+    if (match.owner_id === userId || existing?.match_role === 'creator' || existing?.match_role === 'gm') {
+      const role = match.owner_id === userId ? 'creator' : existing.match_role;
+      await admin.from('match_participants').upsert({ indicator_id: indicatorId, user_id: userId, match_role: role, team: null }, { onConflict: 'indicator_id,user_id' });
+      return json({ role, team: null });
+    }
+    const { data: config } = await admin.from('match_permissions')
+      .select('blue_discord_server_id,blue_discord_role_id,red_discord_server_id,red_discord_role_id')
+      .eq('indicator_id', indicatorId).maybeSingle();
+    const botToken = Deno.env.get('DISCORD_BOT_TOKEN');
+    const { data: authData } = await admin.auth.admin.getUserById(userId);
+    const identity = authData?.user?.identities?.find((item: any) => item.provider === 'discord');
+    const identityData = (identity as any)?.identity_data ?? {};
+    const metadata = authData?.user?.user_metadata ?? {};
+    const discordUserId = String([
+      identityData.sub, identityData.user_id, identityData.provider_id, identityData.id,
+      metadata.sub, metadata.provider_id, metadata.user_id, metadata.discord_id,
+    ].find((value) => /^\\d{17,20}$/.test(String(value ?? ''))) ?? '');
+    let detectedTeam: 'blue' | 'red' | null = null;
+    if (botToken && discordUserId && config) {
+      for (const teamName of ['blue', 'red'] as const) {
+        const guildId = config[teamName === 'blue' ? 'blue_discord_server_id' : 'red_discord_server_id'];
+        const roleId = config[teamName === 'blue' ? 'blue_discord_role_id' : 'red_discord_role_id'];
+        if (!guildId || !roleId) continue;
+        try {
+          const response = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${discordUserId}`, {
+            headers: { Authorization: `Bot ${botToken}` },
+          });
+          if (!response.ok) continue;
+          const member = await response.json();
+          if (Array.isArray(member.roles) && member.roles.includes(roleId)) {
+            detectedTeam = teamName;
+            break;
+          }
+        } catch { /* Treat unavailable Discord membership as spectator. */ }
+      }
+    }
+    const role = detectedTeam ? 'player' : 'spectator';
+    const { error: participantError } = await admin.from('match_participants').upsert({
+      indicator_id: indicatorId, user_id: userId, match_role: role, team: detectedTeam,
+    }, { onConflict: 'indicator_id,user_id' });
+    if (participantError) return json({ error: 'Could not sync match participant' }, 500);
+    if (detectedTeam) {
+      const { error } = await admin.from('match_members').upsert({ indicator_id: indicatorId, user_id: userId, team: detectedTeam }, { onConflict: 'indicator_id,user_id' });
+      if (error) return json({ error: 'Could not sync team membership' }, 500);
+    } else {
+      await admin.from('match_members').delete().eq('indicator_id', indicatorId).eq('user_id', userId);
+    }
+    return json({ role, team: detectedTeam });
+  }
+
   // Anyone with the link can read only the public tactical positions, never player stats.
   if (action === 'read_public') {
     if (!match) return json({ error: 'Match not found' }, 404);
@@ -339,11 +394,8 @@ Deno.serve(async (req: Request) => {
     if (!userId) return json({ error: 'Sign-in required' }, 401);
     const { data: me } = await admin.from('match_participants').select('match_role')
       .eq('indicator_id', indicatorId).eq('user_id', userId).maybeSingle();
-    const { data: permissions } = await admin.from('match_permissions').select('settings')
-      .eq('indicator_id', indicatorId).maybeSingle();
-    const hasDiscordEditorRole = await hasConfiguredDiscordEditorRole(admin, userId);
-    if (!isOwner && me?.match_role !== 'gm' && permissions?.settings?.editCharacterCards !== true && !hasDiscordEditorRole) {
-      return json({ error: 'You do not have permission to edit character cards' }, 403);
+    if (!isOwner && me?.match_role !== 'gm') {
+      return json({ error: 'Only the match creator or a GM can edit character cards' }, 403);
     }
     const characterId = typeof body?.characterId === 'string' ? body.characterId.slice(0,128) : '';
     const profile = body?.profile;
