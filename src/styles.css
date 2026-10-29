@@ -54,3 +54,17 @@
 @media(max-width:700px){.person-row{grid-template-columns:minmax(0,1fr) 95px}.person-row select:last-child{grid-column:2}.settings-grid,.profile-stat-bars{grid-template-columns:1fr}.profile-public-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.add-person-row{flex-direction:column}}
 
 .radar-card{display:flex;flex-direction:column;align-items:center;gap:6px;margin:12px auto 18px;max-width:320px;color:#9eada1;font-size:12px}.radar-card svg{width:100%;max-width:280px;overflow:visible}.radar-grid{fill:none;stroke:#35483a;stroke-width:1}.radar-axis{stroke:#35483a;stroke-width:1}.radar-card text{fill:#a9b8ac;font-size:9px}.radar-value{fill:rgba(185,244,107,.22);stroke:#b9f46b;stroke-width:2}
+
+/* Redesigned roster navigation and field settings */
+.roster-tabs-three{display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:4px}
+.roster-tabs-three button{padding:9px 5px;font-size:10px;line-height:1.25}
+.roster-tabs-three button small{display:block;margin-top:4px}
+.field-settings-sidebar{display:grid;gap:15px;padding:14px 2px;color:#aeb9af;font-size:11px}
+.field-settings-sidebar>label{display:grid;gap:8px}
+.field-settings-sidebar select{width:100%;padding:9px;background:#101510;border:1px solid var(--line);border-radius:4px;color:#e9eee9}
+.field-settings-sidebar input[type=checkbox]{accent-color:var(--green);margin-right:7px}
+.field-settings-sidebar button,.field-setting-inline button{padding:7px 10px;background:#202820;border:1px solid var(--line);border-radius:4px}
+.field-setting-inline{display:flex;align-items:center;gap:12px}
+.field-setting-inline b{flex:1;text-align:center}
+.field-settings-sidebar p{color:var(--muted);line-height:1.5}
+.open-character-card{width:100%;margin:8px 0 14px;padding:10px;border:1px solid #526b3d;border-radius:5px;background:#263b1d;color:var(--green);font-size:11px;font-weight:700}
