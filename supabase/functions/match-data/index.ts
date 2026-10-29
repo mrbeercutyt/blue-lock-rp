@@ -148,6 +148,22 @@ Deno.serve(async (req: Request) => {
     return json({ ok: true, board: safe });
   }
 
+  if (action === 'get_match_access') {
+    if (!userId) return json({ error: 'Sign-in required' }, 401);
+    if (!match) return json({ error: 'Match not found' }, 404);
+    const isOwner = match.owner_id === userId;
+    const { data: participant, error } = await admin.from('match_participants')
+      .select('match_role,team').eq('indicator_id', indicatorId).eq('user_id', userId).maybeSingle();
+    if (error) return json({ error: 'Could not load match access' }, 500);
+    const { data: legacyMember } = await admin.from('match_members').select('team')
+      .eq('indicator_id', indicatorId).eq('user_id', userId).maybeSingle();
+    return json({
+      isOwner,
+      role: isOwner ? 'creator' : (participant?.match_role ?? (legacyMember ? 'player' : 'spectator')),
+      team: participant?.team ?? legacyMember?.team ?? null,
+    });
+  }
+
   // Anyone with the link can read only the public tactical positions, never player stats.
   if (action === 'read_public') {
     if (!match) return json({ error: 'Match not found' }, 404);
