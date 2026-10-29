@@ -18,6 +18,32 @@ function sanitizeArena(value: any) {
   };
 }
 
+const DISCORD_PERMISSION_GUILD_ID = '1384014347654926468';
+const DISCORD_CHARACTER_EDITOR_ROLE_IDS = new Set([
+  '1424085219811786893',
+  '1424085327202619523',
+]);
+
+async function hasConfiguredDiscordEditorRole(admin: ReturnType<typeof createClient>, userId: string) {
+  const botToken = Deno.env.get('DISCORD_BOT_TOKEN');
+  if (!botToken) return false;
+  const { data, error } = await admin.auth.admin.getUserById(userId);
+  if (error || !data.user) return false;
+  const identity = data.user.identities?.find((item: any) => item.provider === 'discord');
+  const discordUserId = String((identity as any)?.identity_data?.sub ?? (identity as any)?.identity_data?.user_id ?? (identity as any)?.id ?? '');
+  if (!/^\\d{17,20}$/.test(discordUserId)) return false;
+  try {
+    const response = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_PERMISSION_GUILD_ID}/members/${discordUserId}`, {
+      headers: { Authorization: `Bot ${botToken}` },
+    });
+    if (!response.ok) return false;
+    const member = await response.json();
+    return Array.isArray(member.roles) && member.roles.some((role: string) => DISCORD_CHARACTER_EDITOR_ROLE_IDS.has(role));
+  } catch {
+    return false;
+  }
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: cors });
 }
@@ -282,7 +308,8 @@ Deno.serve(async (req: Request) => {
       .eq('indicator_id', indicatorId).eq('user_id', userId).maybeSingle();
     const { data: permissions } = await admin.from('match_permissions').select('settings')
       .eq('indicator_id', indicatorId).maybeSingle();
-    if (!isOwner && me?.match_role !== 'gm' && permissions?.settings?.editCharacterCards !== true) {
+    const hasDiscordEditorRole = await hasConfiguredDiscordEditorRole(admin, userId);
+    if (!isOwner && me?.match_role !== 'gm' && permissions?.settings?.editCharacterCards !== true && !hasDiscordEditorRole) {
       return json({ error: 'You do not have permission to edit character cards' }, 403);
     }
     const characterId = typeof body?.characterId === 'string' ? body.characterId.slice(0,128) : '';
