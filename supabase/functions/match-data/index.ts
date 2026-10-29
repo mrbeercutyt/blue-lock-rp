@@ -148,6 +148,42 @@ Deno.serve(async (req: Request) => {
     return json({ ok: true, board: safe });
   }
 
+  if (action === 'set_bookmark') {
+    if (!userId) return json({ error: 'Sign-in required' }, 401);
+    if (!match) return json({ error: 'Match not found' }, 404);
+    const bookmarked = body?.bookmarked === true;
+    if (bookmarked) {
+      const { error } = await admin.from('match_bookmarks').upsert({ indicator_id: indicatorId, user_id: userId }, { onConflict: 'indicator_id,user_id' });
+      if (error) return json({ error: 'Could not bookmark this match' }, 500);
+    } else {
+      const { error } = await admin.from('match_bookmarks').delete().eq('indicator_id', indicatorId).eq('user_id', userId);
+      if (error) return json({ error: 'Could not remove match bookmark' }, 500);
+    }
+    return json({ ok: true, bookmarked });
+  }
+
+  if (action === 'list_bookmarks') {
+    if (!userId) return json({ error: 'Sign-in required' }, 401);
+    if (!match) return json({ error: 'Match not found' }, 404);
+    const { data: mine, error: mineError } = await admin.from('match_bookmarks').select('user_id')
+      .eq('indicator_id', indicatorId).eq('user_id', userId).maybeSingle();
+    if (mineError) return json({ error: 'Could not load bookmark status' }, 500);
+    const { data, error } = await admin.from('match_bookmarks').select('user_id,created_at')
+      .eq('indicator_id', indicatorId).order('created_at');
+    if (error) return json({ error: 'Could not load bookmarked users' }, 500);
+    const users = await Promise.all((data ?? []).map(async (row: any) => {
+      const { data: authData } = await admin.auth.admin.getUserById(row.user_id);
+      const metadata = authData?.user?.user_metadata ?? {};
+      return {
+        user_id: row.user_id,
+        display_name: metadata.full_name ?? metadata.name ?? metadata.user_name ?? metadata.preferred_username ?? row.user_id,
+        avatar_url: metadata.avatar_url ?? metadata.picture ?? null,
+        created_at: row.created_at,
+      };
+    }));
+    return json({ bookmarked: !!mine, users });
+  }
+
   if (action === 'get_match_access') {
     if (!userId) return json({ error: 'Sign-in required' }, 401);
     if (!match) return json({ error: 'Match not found' }, 404);
