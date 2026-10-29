@@ -52,3 +52,5 @@
 .profile-stat{display:grid;grid-template-columns:minmax(90px,1fr) minmax(45px,1fr) 30px;gap:8px;align-items:center;font-size:12px}
 .profile-stat>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.profile-stat>div{height:7px;border-radius:8px;background:#28372c;overflow:hidden}.profile-stat>div i{display:block;height:100%;border-radius:8px;background:#b9f46b}.profile-stat>b{text-align:right}
 @media(max-width:700px){.person-row{grid-template-columns:minmax(0,1fr) 95px}.person-row select:last-child{grid-column:2}.settings-grid,.profile-stat-bars{grid-template-columns:1fr}.profile-public-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.add-person-row{flex-direction:column}}
+
+.radar-card{display:flex;flex-direction:column;align-items:center;gap:6px;margin:12px auto 18px;max-width:320px;color:#9eada1;font-size:12px}.radar-card svg{width:100%;max-width:280px;overflow:visible}.radar-grid{fill:none;stroke:#35483a;stroke-width:1}.radar-axis{stroke:#35483a;stroke-width:1}.radar-card text{fill:#a9b8ac;font-size:9px}.radar-value{fill:rgba(185,244,107,.22);stroke:#b9f46b;stroke-width:2}
