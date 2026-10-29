@@ -105,6 +105,14 @@ Deno.serve(async (req: Request) => {
       indicator_id: indicatorId, board: safe, updated_at: new Date().toISOString(),
     }, { onConflict: 'indicator_id' });
     if (publicError) return json({ error: 'Could not initialize public board' }, 500);
+    const { error: participantError } = await admin.from('match_participants').upsert({
+      indicator_id: indicatorId, user_id: userId, match_role: 'creator', team: null,
+    }, { onConflict: 'indicator_id,user_id' });
+    if (participantError) return json({ error: 'Match created but creator membership could not be initialized' }, 500);
+    const { error: permissionsError } = await admin.from('match_permissions').upsert({
+      indicator_id: indicatorId,
+    }, { onConflict: 'indicator_id' });
+    if (permissionsError) return json({ error: 'Match created but permissions could not be initialized' }, 500);
     return json({ ok: true, board: safe });
   }
 
@@ -192,6 +200,106 @@ Deno.serve(async (req: Request) => {
       indicator_id: indicatorId, user_id: targetUserId, team: targetTeam,
     }, { onConflict: 'indicator_id,user_id' });
     return error ? json({ error: 'Could not assign participant' }, 500) : json({ ok: true });
+  }
+
+  if (action === 'list_participants') {
+    if (!userId) return json({ error: 'Sign-in required' }, 401);
+    const { data: me } = await admin.from('match_participants').select('match_role,team')
+      .eq('indicator_id', indicatorId).eq('user_id', userId).maybeSingle();
+    if (!isOwner && !me) return json({ error: 'You are not a participant in this match' }, 403);
+    const { data, error } = await admin.from('match_participants')
+      .select('user_id,match_role,team,discord_server_id,discord_role_id,created_at')
+      .eq('indicator_id', indicatorId).order('created_at');
+    if (error) return json({ error: 'Could not load participants' }, 500);
+    return json({ participants: data ?? [] });
+  }
+
+  if (action === 'set_participant_role') {
+    if (!userId || !isOwner) return json({ error: 'Only the match creator can manage match roles' }, userId ? 403 : 401);
+    const targetUserId = typeof body?.userId === 'string' ? body.userId : '';
+    const role = body?.matchRole;
+    const participantTeam = ['blue','red'].includes(body?.team) ? body.team : null;
+    if (!targetUserId || !['gm','player','spectator'].includes(role)) {
+      return json({ error: 'Valid userId and matchRole are required' }, 400);
+    }
+    const { error } = await admin.from('match_participants').upsert({
+      indicator_id: indicatorId, user_id: targetUserId, match_role: role,
+      team: role === 'player' ? participantTeam : null,
+    }, { onConflict: 'indicator_id,user_id' });
+    if (error) return json({ error: 'Could not update participant role' }, 500);
+    if (role === 'player' && participantTeam) {
+      await admin.from('match_members').upsert({ indicator_id: indicatorId, user_id: targetUserId, team: participantTeam }, { onConflict: 'indicator_id,user_id' });
+    } else {
+      await admin.from('match_members').delete().eq('indicator_id', indicatorId).eq('user_id', targetUserId);
+    }
+    return json({ ok: true });
+  }
+
+  if (action === 'get_match_settings') {
+    if (!userId) return json({ error: 'Sign-in required' }, 401);
+    const { data: me } = await admin.from('match_participants').select('match_role')
+      .eq('indicator_id', indicatorId).eq('user_id', userId).maybeSingle();
+    if (!isOwner && !me) return json({ error: 'You are not a participant in this match' }, 403);
+    const { data, error } = await admin.from('match_permissions').select('*')
+      .eq('indicator_id', indicatorId).maybeSingle();
+    if (error) return json({ error: 'Could not load match settings' }, 500);
+    return json({ settings: data ?? null });
+  }
+
+  if (action === 'save_match_settings') {
+    if (!userId || !isOwner) return json({ error: 'Only the match creator can edit match settings' }, userId ? 403 : 401);
+    const incoming = body?.settings;
+    if (!incoming || typeof incoming !== 'object') return json({ error: 'Settings object is required' }, 400);
+    const allowed = ['playersMoveOwn','captainBlue','captainRed','editArena','manageParticipants','editCharacterCards','editMatchStats','viewOwnTeamStats','viewOpponentStats','viewAllStats','editScore','editClock','editPaths','addPlayers'];
+    const { data: existing } = await admin.from('match_permissions').select('settings,blue_discord_server_id,blue_discord_role_id,red_discord_server_id,red_discord_role_id')
+      .eq('indicator_id', indicatorId).maybeSingle();
+    const merged: Record<string, unknown> = { ...(existing?.settings ?? {}) };
+    for (const key of allowed) if (typeof incoming[key] === 'boolean') merged[key] = incoming[key];
+    const patch = {
+      indicator_id: indicatorId, settings: merged,
+      blue_discord_server_id: typeof incoming.blueDiscordServerId === 'string' ? incoming.blueDiscordServerId.slice(0,100) : existing?.blue_discord_server_id ?? null,
+      blue_discord_role_id: typeof incoming.blueDiscordRoleId === 'string' ? incoming.blueDiscordRoleId.slice(0,100) : existing?.blue_discord_role_id ?? null,
+      red_discord_server_id: typeof incoming.redDiscordServerId === 'string' ? incoming.redDiscordServerId.slice(0,100) : existing?.red_discord_server_id ?? null,
+      red_discord_role_id: typeof incoming.redDiscordRoleId === 'string' ? incoming.redDiscordRoleId.slice(0,100) : existing?.red_discord_role_id ?? null,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await admin.from('match_permissions').upsert(patch, { onConflict: 'indicator_id' });
+    return error ? json({ error: 'Could not save match settings' }, 500) : json({ ok: true });
+  }
+
+  if (action === 'read_character_profile') {
+    const characterId = typeof body?.characterId === 'string' ? body.characterId.slice(0,128) : '';
+    if (!characterId) return json({ error: 'characterId is required' }, 400);
+    const { data, error } = await admin.from('character_profiles').select('character_id,display_name,current_offer,goals,matches,wins,draws,losses,extra_public_stats,updated_at')
+      .eq('character_id', characterId).maybeSingle();
+    if (error) return json({ error: 'Could not read character profile' }, 500);
+    return json({ profile: data ?? { character_id: characterId, display_name: '', current_offer: '—', goals: 0, matches: 0, wins: 0, draws: 0, losses: 0, extra_public_stats: {} } });
+  }
+
+  if (action === 'save_character_profile') {
+    if (!userId) return json({ error: 'Sign-in required' }, 401);
+    const { data: me } = await admin.from('match_participants').select('match_role')
+      .eq('indicator_id', indicatorId).eq('user_id', userId).maybeSingle();
+    const { data: permissions } = await admin.from('match_permissions').select('settings')
+      .eq('indicator_id', indicatorId).maybeSingle();
+    if (!isOwner && me?.match_role !== 'gm' && permissions?.settings?.editCharacterCards !== true) {
+      return json({ error: 'You do not have permission to edit character cards' }, 403);
+    }
+    const characterId = typeof body?.characterId === 'string' ? body.characterId.slice(0,128) : '';
+    const profile = body?.profile;
+    if (!characterId || !profile || typeof profile !== 'object') return json({ error: 'Invalid character profile' }, 400);
+    const nonNegativeInt = (v: unknown) => Number.isInteger(v) && Number(v) >= 0 ? Number(v) : 0;
+    const patch = {
+      character_id: characterId,
+      display_name: typeof profile.display_name === 'string' ? profile.display_name.slice(0,120) : '',
+      current_offer: typeof profile.current_offer === 'string' ? profile.current_offer.slice(0,120) : '—',
+      goals: nonNegativeInt(profile.goals), matches: nonNegativeInt(profile.matches),
+      wins: nonNegativeInt(profile.wins), draws: nonNegativeInt(profile.draws), losses: nonNegativeInt(profile.losses),
+      extra_public_stats: profile.extra_public_stats && typeof profile.extra_public_stats === 'object' ? profile.extra_public_stats : {},
+      updated_by: userId, updated_at: new Date().toISOString(),
+    };
+    const { error } = await admin.from('character_profiles').upsert(patch, { onConflict: 'character_id' });
+    return error ? json({ error: 'Could not save character profile' }, 500) : json({ ok: true, profile: patch });
   }
 
   return json({ error: 'Unknown action' }, 400);
