@@ -30,8 +30,14 @@ async function hasConfiguredDiscordEditorRole(admin: ReturnType<typeof createCli
   const { data, error } = await admin.auth.admin.getUserById(userId);
   if (error || !data.user) return false;
   const identity = data.user.identities?.find((item: any) => item.provider === 'discord');
-  const discordUserId = String((identity as any)?.identity_data?.sub ?? (identity as any)?.identity_data?.user_id ?? (identity as any)?.id ?? '');
-  if (!/^\\d{17,20}$/.test(discordUserId)) return false;
+  const identityData = (identity as any)?.identity_data ?? {};
+  const metadata = data.user.user_metadata ?? {};
+  const candidates = [
+    identityData.sub, identityData.user_id, identityData.provider_id, identityData.id,
+    metadata.sub, metadata.provider_id, metadata.user_id, metadata.discord_id,
+  ];
+  const discordUserId = String(candidates.find((value) => /^\d{17,20}$/.test(String(value ?? ''))) ?? '');
+  if (!discordUserId) return false;
   try {
     const response = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_PERMISSION_GUILD_ID}/members/${discordUserId}`, {
       headers: { Authorization: `Bot ${botToken}` },
