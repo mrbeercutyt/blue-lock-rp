@@ -261,7 +261,16 @@ Deno.serve(async (req: Request) => {
       .select('user_id,match_role,team,discord_server_id,discord_role_id,created_at')
       .eq('indicator_id', indicatorId).order('created_at');
     if (error) return json({ error: 'Could not load participants' }, 500);
-    return json({ participants: data ?? [] });
+    const participants = await Promise.all((data ?? []).map(async (row: any) => {
+      const { data: authData } = await admin.auth.admin.getUserById(row.user_id);
+      const metadata = authData?.user?.user_metadata ?? {};
+      return {
+        ...row,
+        display_name: metadata.full_name ?? metadata.name ?? metadata.user_name ?? metadata.preferred_username ?? row.user_id,
+        discord_username: metadata.custom_claims?.global_name ?? metadata.global_name ?? metadata.user_name ?? null,
+      };
+    }));
+    return json({ participants });
   }
 
   if (action === 'set_participant_role') {
