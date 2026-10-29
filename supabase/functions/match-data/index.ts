@@ -349,7 +349,7 @@ Deno.serve(async (req: Request) => {
       .eq('indicator_id', indicatorId).eq('user_id', userId).maybeSingle();
     if (!isOwner && !me) return json({ error: 'You are not a participant in this match' }, 403);
     const { data, error } = await admin.from('match_participants')
-      .select('user_id,match_role,team,discord_server_id,discord_role_id,created_at')
+      .select('user_id,match_role,team,character_id,discord_server_id,discord_role_id,created_at')
       .eq('indicator_id', indicatorId).order('created_at');
     if (error) return json({ error: 'Could not load participants' }, 500);
     const participants = await Promise.all((data ?? []).map(async (row: any) => {
@@ -362,6 +362,22 @@ Deno.serve(async (req: Request) => {
       };
     }));
     return json({ participants });
+  }
+
+  if (action === 'set_participant_character') {
+    if (!userId) return json({ error: 'Sign-in required' }, 401);
+    const { data: me } = await admin.from('match_participants').select('match_role')
+      .eq('indicator_id', indicatorId).eq('user_id', userId).maybeSingle();
+    if (!isOwner && me?.match_role !== 'gm') return json({ error: 'Only the match creator or a GM can link characters' }, 403);
+    const targetUserId = typeof body?.userId === 'string' ? body.userId : '';
+    const characterId = body?.characterId === null || body?.characterId === '' ? null : String(body?.characterId ?? '').slice(0,128);
+    if (!targetUserId) return json({ error: 'userId is required' }, 400);
+    const { data: target } = await admin.from('match_participants').select('user_id')
+      .eq('indicator_id', indicatorId).eq('user_id', targetUserId).maybeSingle();
+    if (!target) return json({ error: 'Participant not found in this match' }, 404);
+    const { error } = await admin.from('match_participants').update({ character_id: characterId, updated_at: new Date().toISOString() })
+      .eq('indicator_id', indicatorId).eq('user_id', targetUserId);
+    return error ? json({ error: 'Could not link character' }, 500) : json({ ok: true, characterId });
   }
 
   if (action === 'set_participant_role') {
