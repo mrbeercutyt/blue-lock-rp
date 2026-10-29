@@ -189,11 +189,13 @@ Deno.serve(async (req: Request) => {
   const isOwner = match.owner_id === userId;
   const { data: membership } = await admin.from('match_members').select('team')
     .eq('indicator_id', indicatorId).eq('user_id', userId).maybeSingle();
-  const team = isOwner ? 'gm' : membership?.team;
+  const { data: participant } = await admin.from('match_participants').select('match_role,team')
+    .eq('indicator_id', indicatorId).eq('user_id', userId).maybeSingle();
+  const team = (isOwner || participant?.match_role === 'gm') ? 'gm' : (membership?.team ?? participant?.team);
   if (!team) return json({ error: 'You are not a participant in this match' }, 403);
 
   if (action === 'save_public') {
-    if (!isOwner) return json({ error: 'Only the match owner can update the public board' }, 403);
+    if (team !== 'gm') return json({ error: 'Only the match creator or a GM can update the public board' }, 403);
     const board = body?.board;
     if (!board || !Array.isArray(board.players) || !board.ball || !Array.isArray(board.paths)) {
       return json({ error: 'Invalid board payload' }, 400);
@@ -211,7 +213,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (action === 'save_player_stats') {
-    if (!isOwner) return json({ error: 'Only the match owner can manage player stats' }, 403);
+    if (team !== 'gm') return json({ error: 'Only the match creator or a GM can manage player stats' }, 403);
     const playerId = Number(body?.playerId);
     const playerTeam = body?.team;
     if (!Number.isInteger(playerId) || !['blue','red'].includes(playerTeam) || !body?.stats || typeof body.stats !== 'object') {
