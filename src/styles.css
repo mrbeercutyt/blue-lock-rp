@@ -68,3 +68,5 @@
 .field-setting-inline b{flex:1;text-align:center}
 .field-settings-sidebar p{color:var(--muted);line-height:1.5}
 .open-character-card{width:100%;margin:8px 0 14px;padding:10px;border:1px solid #526b3d;border-radius:5px;background:#263b1d;color:var(--green);font-size:11px;font-weight:700}
+
+.bookmark-avatar{width:28px;height:28px;object-fit:cover;border-radius:50%;margin-left:auto;border:1px solid var(--line)}
