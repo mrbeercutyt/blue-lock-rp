@@ -23,7 +23,7 @@ It does not define the tactical-match tables above. Do not point the primary Sup
 - `VITE_CATALOG_SUPABASE_URL`
 - `VITE_CATALOG_SUPABASE_ANON_KEY`
 
-It currently exposes read-only helpers for characters, teams, team rosters, player costs, and career stats. It intentionally contains no insert, update, upsert, or delete methods. The adapter is not yet connected to UI components.
+It exposes read-only helpers for approved character/team display data and the signed-in user's own character/career stats. The browser calls the existing project's `catalog-read` Edge Function; it does not connect directly to the catalog project. The adapter intentionally contains no insert, update, upsert, or delete methods. Player costs, offers, transfers, and raw rosters are not exposed. The Edge Function is staged in the repository but is not deployed until the required server-side secrets are configured.
 
 ## Verified access state
 
@@ -41,9 +41,9 @@ These indexes were applied only to the catalog project, not to the existing prod
 
 ## Current limitations / next steps
 
-1. Establish the catalog authorization bridge and verify Discord identity mapping; do not assume Supabase auth user UUID equals a Discord ID.
-2. Decide which catalog fields are public and which are private, especially budgets, player costs, offers, and transfers.
-3. Add and test explicit read policies/views after the identity and visibility rules are defined.
-4. Connect the adapter to the UI in a controlled feature-by-feature way, starting with character display after read access is confirmed.
+1. Configure `CATALOG_SUPABASE_URL` and `CATALOG_SUPABASE_SERVICE_ROLE_KEY` as secrets in the existing match/auth Supabase project, then deploy `catalog-read` with JWT verification enabled.
+2. Test the API's signed-out, missing-Discord-identity, own-profile, and career-stat paths before exposing it in UI.
+3. Decide which additional catalog fields are visible to all signed-in users versus private, especially budgets, player costs, offers, and transfers.
+4. Connect the adapter to UI components only after the server function is deployed and tested.
 5. Determine where match boards, participants, permissions, and live training state will live during and after migration.
 6. Keep all catalog writes disabled while the external database is read-only.
