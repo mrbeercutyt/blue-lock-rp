@@ -31,6 +31,12 @@ The catalog project has Row Level Security enabled on all seven tables. A read-o
 
 This means the frontend should not yet depend on catalog reads: anonymous/publishable keys do not bypass RLS, and queries will not return data until the database owner defines the intended SELECT policies or provides suitable read-only views. Do not disable RLS just to make the adapter work.
 
+## Performance follow-up
+
+The Supabase performance advisor reported that `offers.buyer_team_id` and `offers.seller_team_id` foreign keys have no covering indexes. The optional SQL migration `supabase/migrations/20261031000100_catalog_offer_fk_indexes.sql` adds indexes for those two columns using `CREATE INDEX IF NOT EXISTS`.
+
+This migration is intentionally not auto-applied. Review and apply it only to the separate catalog project after confirming that its `public.offers` table matches the expected schema. Do not run it against the existing match/auth project just because it is the current production project.
+
 ## Current limitations / next steps
 
 1. Add and test explicit read policies with the database owner before pointing any UI at the catalog.
