@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'src/**'
+      - 'supabase/migrations/**'
+      - 'docs/**'
       - 'package.json'
       - 'package-lock.json'
       - 'tsconfig*.json'
@@ -15,6 +17,8 @@ on:
       - 'migration/read-only-catalog-adapter'
     paths:
       - 'src/**'
+      - 'supabase/migrations/**'
+      - 'docs/**'
       - 'package.json'
       - 'package-lock.json'
       - 'tsconfig*.json'
