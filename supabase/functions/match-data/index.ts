@@ -132,6 +132,23 @@ Deno.serve(async (req: Request) => {
     .select('indicator_id,owner_id,name').eq('indicator_id', indicatorId).maybeSingle();
   if (matchError) return json({ error: 'Database error' }, 500);
 
+  // Public tactical boards are addressable by link before a registered match exists.
+  // Reading a missing board must return an empty board, not a 404 that leaves the
+  // client permanently waiting for its initial cloud load.
+  if (action === 'read_public') {
+    const { data, error } = await admin.from('match_public_boards').select('board')
+      .eq('indicator_id', indicatorId).maybeSingle();
+    if (error) return json({ error: 'Database error' }, 500);
+    if (data?.board) return json({ board: { ...data.board, arena: sanitizeArena(data.board?.arena) } });
+    const { data: legacy } = await admin.from('match_boards').select('board').eq('indicator_id', indicatorId).maybeSingle();
+    const old = legacy?.board;
+    if (!old || !Array.isArray(old.players)) return json({ board: { players: [], ball: {x:50,y:62}, paths: [] } });
+    return json({ board: {
+      players: old.players.map((p: any) => ({ id:p.id, name:p.name, number:p.number, team:p.team, x:p.x, y:p.y, role:p.role, dummy:p.dummy === true })),
+      ball: old.ball ?? {x:50,y:62}, paths: Array.isArray(old.paths) ? old.paths : [], arena: sanitizeArena(old.arena),
+    } });
+  }
+
   if (action === 'set_official') {
     if (!userId) return json({ error: 'Sign-in required' }, 401);
     if (!match) return json({ error: 'Match not found' }, 404);
@@ -322,26 +339,6 @@ Deno.serve(async (req: Request) => {
       await admin.from('match_members').delete().eq('indicator_id', indicatorId).eq('user_id', userId);
     }
     return json({ role, team: detectedTeam });
-  }
-
-  // Anyone with the link can read only the public tactical positions, never player stats.
-  if (action === 'read_public') {
-    if (!match) return json({ error: 'Match not found' }, 404);
-    const { data, error } = await admin.from('match_public_boards').select('board')
-      .eq('indicator_id', indicatorId).maybeSingle();
-    if (error) return json({ error: 'Database error' }, 500);
-    if (data) return json({ board: { ...data.board, arena: sanitizeArena(data.board?.arena) } });
-    // Backward-compatible bootstrap: remove every private stat field from the legacy board.
-    const { data: legacy } = await admin.from('match_boards').select('board').eq('indicator_id', indicatorId).maybeSingle();
-    const old = legacy?.board;
-    if (!old || !Array.isArray(old.players)) return json({ board: { players: [], ball: {x:50,y:62}, paths: [] } });
-    const safe = {
-      players: old.players.map((p: any) => ({ id:p.id, name:p.name, number:p.number, team:p.team, x:p.x, y:p.y, role:p.role, dummy:p.dummy === true })),
-      ball: old.ball ?? {x:50,y:62},
-      paths: Array.isArray(old.paths) ? old.paths : [],
-      arena: sanitizeArena(old.arena),
-    };
-    return json({ board: safe });
   }
 
   if (!userId) return json({ error: 'Sign-in required' }, 401);
