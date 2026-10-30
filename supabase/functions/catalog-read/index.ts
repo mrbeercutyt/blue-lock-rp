@@ -59,8 +59,17 @@ Deno.serve(async (req: Request) => {
   const action = body?.action;
 
   if (action === 'list_characters') {
+    // Scope the directory to the caller's guild; do not expose a global player
+    // directory across unrelated Discord communities.
+    const { data: ownCharacter, error: ownError } = await catalog.from('characters')
+      .select('guild_id')
+      .eq('discord_id', discordId)
+      .maybeSingle();
+    if (ownError) return json({ error: 'Could not verify character server' }, 500);
+    if (ownCharacter?.guild_id == null) return json({ characters: [] });
     const { data, error } = await catalog.from('characters')
       .select('id,name,character_name,shot_acc,shot_power,passing,weak_foot,dribble,control,header,tackle,steal,strength,jump,stamina,speed,game_read,vision')
+      .eq('guild_id', ownCharacter.guild_id)
       .order('character_name', { ascending: true })
       .limit(200);
     if (error) return json({ error: 'Could not load character directory' }, 500);
