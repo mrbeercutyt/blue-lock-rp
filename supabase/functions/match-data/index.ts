@@ -61,7 +61,7 @@ async function getDiscordMemberRoles(admin: ReturnType<typeof createClient>, use
     identityData.sub, identityData.user_id, identityData.provider_id, identityData.id,
     metadata.sub, metadata.provider_id, metadata.user_id, metadata.discord_id,
   ];
-  const discordUserId = String(candidates.find((value) => /^\\d{17,20}$/.test(String(value ?? ''))) ?? '');
+  const discordUserId = String(candidates.find((value) => /^\d{17,20}$/.test(String(value ?? ''))) ?? '');
   if (!discordUserId) return [];
   try {
     const response = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_PERMISSION_GUILD_ID}/members/${discordUserId}`, {
