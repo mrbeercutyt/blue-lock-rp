@@ -366,3 +366,14 @@
 .topbar .top-title{flex:1;min-width:90px}
 @media(max-width:1050px){.header-official-trigger{margin-left:5px;margin-right:5px;max-width:115px;white-space:normal;line-height:1.1}.topbar .top-title{display:none}}
 @media(max-width:680px){.header-official-trigger{max-width:88px;font-size:8px;padding:0 6px}.top-actions .discord-auth{max-width:90px}}
+
+/* Match journal controls */
+.event-log-actions{display:flex;justify-content:flex-end;gap:8px;padding:8px 0}
+.event-log-actions button,.event-delete{border:1px solid var(--line);border-radius:6px;background:#202a20;color:#dce8d8;padding:6px 9px;font-size:10px;cursor:pointer}
+.event-log-actions .danger{border-color:#7d3939;background:#321c1c;color:#ffb4aa}
+.event-log ol li{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.event-log ol li>span{min-width:0;flex:1}
+.event-delete{flex:0 0 auto;padding:0 6px;font-size:16px;line-height:1.4;color:#ffb4aa}
+.event-log-actions button:hover,.event-delete:hover{border-color:var(--green)}
+/* Character profile is a centered modal above the pitch, not part of the roster sidebar. */
+@media(min-width:1051px){.roster:has(.character-card-modal){position:static;z-index:auto}.match-admin-panel.character-card-modal{position:fixed;z-index:101;left:50%;top:50%;transform:translate(-50%,-50%);width:min(650px,calc(100vw - 40px));max-height:calc(100vh - 48px);overflow-y:auto;margin:0;padding:22px;background:#151a16;border:1px solid #50634f;border-radius:14px;box-shadow:0 24px 90px #000c}.character-card-modal .admin-panel-head{position:sticky;top:-22px;z-index:3;background:#151a16;padding:6px 0 12px}.character-card-modal .character-card-panel{padding-bottom:8px}.character-card-modal .card-overlay-close{width:34px;height:34px;font-size:24px}}
