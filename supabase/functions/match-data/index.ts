@@ -49,6 +49,32 @@ async function hasConfiguredDiscordEditorRole(admin: ReturnType<typeof createCli
     return false;
   }
 }
+async function getDiscordMemberRoles(admin: ReturnType<typeof createClient>, userId: string): Promise<string[]> {
+  const botToken = Deno.env.get('DISCORD_BOT_TOKEN');
+  if (!botToken) return [];
+  const { data, error } = await admin.auth.admin.getUserById(userId);
+  if (error || !data.user) return [];
+  const identity = data.user.identities?.find((item: any) => item.provider === 'discord');
+  const identityData = (identity as any)?.identity_data ?? {};
+  const metadata = data.user.user_metadata ?? {};
+  const candidates = [
+    identityData.sub, identityData.user_id, identityData.provider_id, identityData.id,
+    metadata.sub, metadata.provider_id, metadata.user_id, metadata.discord_id,
+  ];
+  const discordUserId = String(candidates.find((value) => /^\\d{17,20}$/.test(String(value ?? ''))) ?? '');
+  if (!discordUserId) return [];
+  try {
+    const response = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_PERMISSION_GUILD_ID}/members/${discordUserId}`, {
+      headers: { Authorization: `Bot ${botToken}` },
+    });
+    if (!response.ok) return [];
+    const member = await response.json();
+    return Array.isArray(member.roles) ? member.roles.map((role: unknown) => String(role)) : [];
+  } catch {
+    return [];
+  }
+}
+
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: cors });
@@ -119,6 +145,13 @@ Deno.serve(async (req: Request) => {
       return { indicator_id: row.indicator_id, official_id: row.state.id, title: row.state.title ?? 'Официальный матч', name: board?.name ?? 'Матч', started_at: row.state.started_at ?? null };
     }));
     return json({ matches: matches.sort((a: any, b: any) => String(b.started_at ?? '').localeCompare(String(a.started_at ?? '')) ) });
+  }
+
+  if (action === 'verify_character_registration') {
+    if (!userId) return json({ isRegistered: false, isGM: false });
+    const roles = await getDiscordMemberRoles(admin, userId);
+    const isGM = roles.some((role) => DISCORD_CHARACTER_EDITOR_ROLE_IDS.has(role));
+    return json({ isRegistered: isGM || roles.includes('1424088864917688521'), isGM });
   }
 
   if (action === 'verify_gm_role') {
