@@ -121,6 +121,11 @@ Deno.serve(async (req: Request) => {
     return json({ matches: matches.sort((a: any, b: any) => String(b.started_at ?? '').localeCompare(String(a.started_at ?? '')) ) });
   }
 
+  if (action === 'verify_gm_role') {
+    if (!userId) return json({ isGM: false });
+    return json({ isGM: await hasConfiguredDiscordEditorRole(admin, userId) });
+  }
+
   if (!indicatorId || indicatorId.length > 128) return json({ error: 'indicatorId is required' }, 400);
 
   const { data: match, error: matchError } = await admin.from('match_boards')
