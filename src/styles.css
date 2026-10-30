@@ -102,3 +102,8 @@
 .player-entry .player-select{width:100%;min-width:0}
 .player-entry .delete-dummy{align-self:flex-end;border:1px solid #754747;background:#281818;color:#f0b5b5;border-radius:7px;padding:5px 9px;font-size:11px;cursor:pointer}
 .person-row .participant-team{display:block;line-height:1.4;overflow-wrap:anywhere}
+
+/* Mobile access to the desktop player-details panel */
+.close-details{display:none}
+.details-heading-icon{display:block}
+@media(max-width:1050px){.details{display:none}.details.mobile-details-open{display:block;position:fixed;z-index:40;top:0;right:0;bottom:64px;width:min(92vw,390px);overflow-y:auto;padding:18px 14px;background:#151a16;border-left:1px solid var(--line);box-shadow:-18px 0 45px #000a}.details.mobile-details-open .close-details{display:inline-flex}.details.mobile-details-open .details-heading-icon{display:none}.mobile-nav{z-index:50}.mobile-nav button{min-width:0}.mobile-nav button:nth-child(2){border-color:#526b3d;color:var(--green)}}
