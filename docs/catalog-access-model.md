@@ -2,29 +2,44 @@
 
 ## Current state
 
-The incoming catalog project has RLS enabled on all seven tables but currently has no policies. The current application uses Supabase Auth with Discord OAuth. The existing match project has an `authenticated` SELECT policy for `match_boards`; that does not automatically define access for the separate catalog project.
+The incoming catalog project has RLS enabled on all seven tables but has no direct table policies. The current application authenticates users through Discord OAuth in the existing match/auth Supabase project. The catalog is a separate project, so its `authenticated` role does not automatically receive the current project's session.
 
-No policies are applied by this document. It records a conservative target for review before the catalog is connected to the UI.
+The new `supabase/functions/catalog-read/index.ts` is a server-side, read-only proxy. It validates the incoming session against the existing auth project, extracts a Discord ID only from the provider-issued Discord identity payload (not editable user metadata), then queries the catalog with a server-side key. The frontend adapter calls this function through the existing authenticated client and no longer needs catalog URL/key variables in the browser.
 
-## Proposed baseline
+The function is staged in the repository but is **not deployed**. It will return 503 until these server-side secrets are configured in the existing match/auth Supabase project:
 
-- Keep RLS enabled on every catalog table.
-- Do not grant anonymous access to raw catalog tables by default.
-- Require a valid Supabase session (`authenticated`) for personal character profiles, rosters, career statistics, costs, transfers, and offers.
-- If unauthenticated visitors need a public directory, expose only explicitly approved public fields through a dedicated view (for example, team display name and public identifier). Do not expose owner/vice-captain IDs, budgets, transfer details, offers, or player costs through a public view unless the project owner explicitly approves them.
-- Never use the service-role key in browser code. The frontend may use only the publishable/anon key and authenticated user session.
-- Keep catalog writes disabled in the frontend; read access does not imply permission to change records.
+- `CATALOG_SUPABASE_URL` — URL of the separate catalog project.
+- `CATALOG_SUPABASE_SERVICE_ROLE_KEY` — service-role key for that catalog project; store only as a Supabase Edge Function secret.
 
-## Identity and row scope
+Do not put either value in `VITE_*`, commit it to Git, or send it to the browser. Deploy the function only after the secrets are set. No catalog RLS policies have been disabled or broadened.
 
-The existing app authenticates through Discord OAuth, but the catalog stores Discord IDs separately from Supabase Auth user UUIDs. Do not compare `auth.uid()` directly to `characters.discord_id`, and do not assume a user metadata field is trustworthy without validating its source. Before adding per-user row policies, establish a verified identity mapping or a server-side authorization mechanism.
+## API visibility
 
-A broad `TO authenticated USING (true)` policy would allow every signed-in user to read every row in that table. Do not use that policy for personal or commercially sensitive tables unless that exact visibility is intended. Prefer public views for safe public fields and narrowly scoped policies for private records.
+All API actions require a valid signed-in session and a verified provider-issued Discord identity. The API has no write actions.
 
-## Required review before activation
+- `list_characters`: returns a limited set of display names and football stats, not Discord IDs, guild IDs, or training/practice points.
+- `my_character`: returns the current user's character based on the verified Discord ID, including that character's guild ID and points.
+- `list_teams`: returns team ID, display name, and creation time only; budgets, owner IDs, and vice-captain IDs are excluded.
+- `my_career_stats`: returns career stats only for the current signed-in user's verified Discord ID.
+- Player costs, offers, transfers, and raw rosters are not exposed by the proxy until their visibility rules are explicitly approved.
 
-1. Confirm which columns are public and which require sign-in.
-2. Confirm whether all signed-in users may view all player records, or only their own / their team’s records.
-3. Verify Discord identity mapping and team membership rules.
-4. Add explicit policies or safe views in a separate SQL migration, then test anonymous and authenticated behavior with representative accounts.
-5. Re-run Supabase Security Advisor and the frontend build before connecting the catalog UI.
+The character directory and team names are visible only to signed-in users through this proxy; they are not publicly accessible without authentication.
+
+## Security constraints
+
+- Keep RLS enabled on all catalog tables.
+- Never use the catalog service-role key in browser code.
+- Do not compare `auth.uid()` directly with `characters.discord_id`.
+- Do not trust caller-supplied Discord IDs for personal records; the server derives the ID from the verified OAuth identity.
+- Do not add broad table policies just to make direct browser queries work.
+- Keep all catalog writes disabled while the source catalog is read-only.
+
+## Deployment checklist
+
+1. Add the two secrets above to the existing match/auth Supabase project's Edge Function secrets.
+2. Deploy `catalog-read` with JWT verification enabled.
+3. Verify a signed-out request returns 401 and a signed-in request with no provider-issued Discord identity returns 403.
+4. Verify the character and career-stat actions can only retrieve the caller's own private record.
+5. Verify the returned team/character fields do not include budgets, offers, costs, or private IDs.
+6. Re-run the frontend build and Supabase Security Advisor before connecting the adapter to visible UI components.
+7. Determine where match boards, participants, permissions, and live training state will live during and after the migration.
