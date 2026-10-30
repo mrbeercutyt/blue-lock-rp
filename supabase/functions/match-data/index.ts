@@ -146,6 +146,29 @@ Deno.serve(async (req: Request) => {
     return json({ ok: true, officialMatch: settings.officialMatch });
   }
 
+  if (action === 'get_training_state') {
+    if (!match) return json({ error: 'Match not found' }, 404);
+    const { data } = await admin.from('match_permissions').select('settings').eq('indicator_id', indicatorId).maybeSingle();
+    const canSeeLog = !!userId && (match.owner_id === userId || await hasConfiguredDiscordEditorRole(admin, userId));
+    const state = data?.settings?.trainingState ?? { score: [0, 0], half: 1, clock: '00:00', clockRunning: false, eventLog: [] };
+    return json({ state: { score: Array.isArray(state.score) ? state.score : [0,0], half: state.half === 2 ? 2 : 1, clock: /^\\d{2,3}:\\d{2}$/.test(String(state.clock ?? '')) ? state.clock : '00:00', clockRunning: state.clockRunning === true, eventLog: canSeeLog && Array.isArray(state.eventLog) ? state.eventLog.slice(0,100) : [] }, canSeeLog });
+  }
+
+  if (action === 'save_training_state') {
+    if (!userId) return json({ error: 'Sign-in required' }, 401);
+    if (!match) return json({ error: 'Match not found' }, 404);
+    const isGlobalGM = await hasConfiguredDiscordEditorRole(admin, userId);
+    if (match.owner_id !== userId && !isGlobalGM) return json({ error: 'Only the board creator or a Discord GM can update training state' }, 403);
+    const incoming = body?.state ?? {};
+    const score = Array.isArray(incoming.score) && incoming.score.length === 2 ? incoming.score.map((v: any) => Math.max(0, Math.min(99, Math.floor(Number(v) || 0))) : [0,0];
+    const clock = /^\\d{2,3}:\\d{2}$/.test(String(incoming.clock ?? '')) ? String(incoming.clock) : '00:00';
+    const eventLog = Array.isArray(incoming.eventLog) ? incoming.eventLog.slice(0,100).map((e: any) => ({ time: String(e?.time ?? '').slice(0,12), message: String(e?.message ?? '').slice(0,300) })) : [];
+    const { data: existing } = await admin.from('match_permissions').select('settings').eq('indicator_id', indicatorId).maybeSingle();
+    const settings = { ...(existing?.settings ?? {}), trainingState: { score, half: incoming.half === 2 ? 2 : 1, clock, clockRunning: incoming.clockRunning === true, eventLog } };
+    const { error } = await admin.from('match_permissions').upsert({ indicator_id: indicatorId, settings, updated_at: new Date().toISOString() }, { onConflict: 'indicator_id' });
+    return error ? json({ error: 'Could not save training state' }, 500) : json({ ok: true });
+  }
+
   if (action === 'create_match') {
     if (!userId) return json({ error: 'Sign-in required' }, 401);
     if (match) return json({ error: 'Match already exists' }, 409);
