@@ -361,3 +361,8 @@
 .participant-role-creator{color:#8fd9ff;font-size:11px}
 @media(max-width:1050px){.topbar .brand>span:last-child{max-width:38vw;overflow:hidden;text-overflow:ellipsis}.top-actions{gap:4px}.official-matches-trigger{max-width:105px;padding:0 7px;font-size:9px}.notification-trigger{width:31px;min-width:31px}.global-modal{padding:16px}}
 @media(max-width:680px){.topbar .brand>span:last-child{display:none}.top-actions .official-matches-trigger{max-width:92px;white-space:normal;line-height:1.1}.top-actions .discord-auth{max-width:100px}.notification-popover{right:8px;top:64px}}
+
+.header-official-trigger{flex:0 0 auto;margin-left:8px;margin-right:auto}
+.topbar .top-title{flex:1;min-width:90px}
+@media(max-width:1050px){.header-official-trigger{margin-left:5px;margin-right:5px;max-width:115px;white-space:normal;line-height:1.1}.topbar .top-title{display:none}}
+@media(max-width:680px){.header-official-trigger{max-width:88px;font-size:8px;padding:0 6px}.top-actions .discord-auth{max-width:90px}}
