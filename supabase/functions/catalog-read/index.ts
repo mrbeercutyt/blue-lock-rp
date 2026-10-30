@@ -13,11 +13,11 @@ function json(body: unknown, status = 200) {
 
 function discordIdFromUser(user: any): string | null {
   const identity = user?.identities?.find((item: any) => item.provider === 'discord');
+  // Only accept the provider-issued identity payload. User-editable metadata
+  // is intentionally excluded so a client cannot claim another Discord ID.
   const identityData = identity?.identity_data ?? {};
-  const metadata = user?.user_metadata ?? {};
   const candidates = [
     identityData.sub, identityData.user_id, identityData.provider_id, identityData.id,
-    metadata.sub, metadata.provider_id, metadata.user_id, metadata.discord_id,
   ];
   const value = candidates.find((candidate) => /^\d{17,20}$/.test(String(candidate ?? '')));
   return value === undefined ? null : String(value);
