@@ -84,3 +84,16 @@
 .person-row .participant-character-link{display:grid;gap:5px;color:var(--muted);font-size:12px}
 .people-tab-intro{font-size:12px;line-height:1.5;color:var(--muted);padding:2px 4px}
 .people-tab-intro p{margin:6px 0}
+
+/* Prevent narrow sidebar from splitting every character onto its own line. */
+.people-list,.person-row,.person-row>*{min-width:0;width:100%;max-width:100%;}
+.person-row{display:flex;flex-direction:column;align-items:stretch;overflow:hidden;}
+.person-row span,.person-row b,.person-row small{writing-mode:horizontal-tb!important;word-break:normal!important;overflow-wrap:anywhere!important;white-space:normal!important;max-width:100%;}
+.person-row span b{display:block;font-size:13px;line-height:1.4}
+.person-row span small{display:block;font-size:10px;line-height:1.4}
+.field-dimension{display:grid;grid-template-columns:minmax(0,1fr) 68px;align-items:center;gap:8px;width:100%}
+.field-dimension input[type=range],.stat-value-controls input[type=range]{min-width:0;width:100%}
+.field-dimension input[type=number],.stat-value-controls input[type=number]{width:100%;min-width:0;background:#101510;color:#e9f0e9;border:1px solid #39493d;border-radius:7px;padding:7px}
+.stat-value-controls{display:grid;grid-template-columns:minmax(0,1fr) 62px;gap:8px;align-items:center}
+.character-list-actions button{width:100%;margin:0 0 10px;padding:9px;border:1px solid #405145;border-radius:8px;background:#1b2a20}
+.always-match-settings{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}
