@@ -368,6 +368,13 @@ Deno.serve(async (req: Request) => {
     if (!Number.isInteger(playerId) || !['blue','red'].includes(playerTeam) || !body?.stats || typeof body.stats !== 'object') {
       return json({ error: 'Invalid player stats payload' }, 400);
     }
+    const isGlobalGM = participant?.match_role === 'gm' || await hasConfiguredDiscordEditorRole(admin, userId);
+    if (!isGlobalGM) {
+      if (!isOwner) return json({ error: 'Only a Discord GM can edit real player stats' }, 403);
+      const { data: publicBoard } = await admin.from('match_public_boards').select('board').eq('indicator_id', indicatorId).maybeSingle();
+      const target = publicBoard?.board?.players?.find((p: any) => Number(p.id) === playerId && p.team === playerTeam);
+      if (!target?.dummy) return json({ error: 'The board creator may edit stats only for dummy characters' }, 403);
+    }
     const ciphertext = await encryptJson({ stats: body.stats, weapons: body.weapons ?? [], practice: body.practice ?? 0, training: body.training ?? 0, rating: body.rating ?? 0 });
     const { error } = await admin.from('match_player_secrets').upsert({
       indicator_id: indicatorId, player_id: playerId, team: playerTeam, ciphertext, updated_at: new Date().toISOString(),
@@ -377,8 +384,13 @@ Deno.serve(async (req: Request) => {
 
   if (action === 'read_team_stats') {
     const requestedTeam = body?.team;
-    if (team !== 'gm' && requestedTeam !== team) return json({ error: 'You may only view your own team stats' }, 403);
     if (!['blue','red'].includes(requestedTeam)) return json({ error: 'Invalid team' }, 400);
+    if (team !== 'gm' && requestedTeam !== team) {
+      const { data: permissionRow } = await admin.from('match_permissions').select('settings').eq('indicator_id', indicatorId).maybeSingle();
+      const settings = permissionRow?.settings ?? {};
+      const allowed = settings.viewAllStats === true || (settings.viewOpponentStats === true && (team === 'blue' || team === 'red'));
+      if (!allowed) return json({ error: 'You may only view your own team stats unless the board creator enables opponent/all stats' }, 403);
+    }
     const { data, error } = await admin.from('match_player_secrets').select('player_id,ciphertext')
       .eq('indicator_id', indicatorId).eq('team', requestedTeam);
     if (error) return json({ error: 'Could not load team stats' }, 500);
@@ -507,9 +519,8 @@ Deno.serve(async (req: Request) => {
     if (!userId) return json({ error: 'Sign-in required' }, 401);
     const { data: me } = await admin.from('match_participants').select('match_role')
       .eq('indicator_id', indicatorId).eq('user_id', userId).maybeSingle();
-    if (!isOwner && me?.match_role !== 'gm') {
-      return json({ error: 'Only the match creator or a GM can edit character cards' }, 403);
-    }
+    const isGlobalGM = me?.match_role === 'gm' || await hasConfiguredDiscordEditorRole(admin, userId);
+    if (!isGlobalGM) return json({ error: 'Only users with a Discord GM role can edit character cards' }, 403);
     const characterId = typeof body?.characterId === 'string' ? body.characterId.slice(0,128) : '';
     const profile = body?.profile;
     if (!characterId || !profile || typeof profile !== 'object') return json({ error: 'Invalid character profile' }, 400);
