@@ -160,7 +160,7 @@ Deno.serve(async (req: Request) => {
     const isGlobalGM = await hasConfiguredDiscordEditorRole(admin, userId);
     if (match.owner_id !== userId && !isGlobalGM) return json({ error: 'Only the board creator or a Discord GM can update training state' }, 403);
     const incoming = body?.state ?? {};
-    const score = Array.isArray(incoming.score) && incoming.score.length === 2 ? incoming.score.map((v: any) => Math.max(0, Math.min(99, Math.floor(Number(v) || 0))) : [0,0];
+    const score = Array.isArray(incoming.score) && incoming.score.length === 2 ? incoming.score.map((v: any) => Math.max(0, Math.min(99, Math.floor(Number(v) || 0)))) : [0,0];
     const clock = /^\\d{2,3}:\\d{2}$/.test(String(incoming.clock ?? '')) ? String(incoming.clock) : '00:00';
     const eventLog = Array.isArray(incoming.eventLog) ? incoming.eventLog.slice(0,100).map((e: any) => ({ time: String(e?.time ?? '').slice(0,12), message: String(e?.message ?? '').slice(0,300) })) : [];
     const { data: existing } = await admin.from('match_permissions').select('settings').eq('indicator_id', indicatorId).maybeSingle();
