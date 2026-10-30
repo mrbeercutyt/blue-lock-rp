@@ -97,3 +97,8 @@
 .stat-value-controls{display:grid;grid-template-columns:minmax(0,1fr) 62px;gap:8px;align-items:center}
 .character-list-actions button{width:100%;margin:0 0 10px;padding:9px;border:1px solid #405145;border-radius:8px;background:#1b2a20}
 .always-match-settings{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}
+
+.player-entry{display:flex;flex-direction:column;gap:5px;min-width:0}
+.player-entry .player-select{width:100%;min-width:0}
+.player-entry .delete-dummy{align-self:flex-end;border:1px solid #754747;background:#281818;color:#f0b5b5;border-radius:7px;padding:5px 9px;font-size:11px;cursor:pointer}
+.person-row .participant-team{display:block;line-height:1.4;overflow-wrap:anywhere}
