@@ -497,11 +497,12 @@ Deno.serve(async (req: Request) => {
     if (!canManageSettings) return json({ error: 'Only the match creator or a Discord GM can edit match settings' }, 403);
     const incoming = body?.settings;
     if (!incoming || typeof incoming !== 'object') return json({ error: 'Settings object is required' }, 400);
-    const allowed = ['playersMoveOwn','captainBlue','captainRed','editArena','manageParticipants','editCharacterCards','editMatchStats','viewOwnTeamStats','viewOpponentStats','viewAllStats','editScore','editClock','editPaths','addPlayers'];
+    const allowed = ['playersMoveOwn','captainBlue','captainRed','manageParticipants','viewOwnTeamStats','viewOpponentStats','viewAllStats','editScore','editClock','editPaths'];
     const { data: existing } = await admin.from('match_permissions').select('settings,blue_discord_server_id,blue_discord_role_id,red_discord_server_id,red_discord_role_id')
       .eq('indicator_id', indicatorId).maybeSingle();
     const merged: Record<string, unknown> = { ...(existing?.settings ?? {}) };
     for (const key of allowed) if (typeof incoming[key] === 'boolean') merged[key] = incoming[key];
+    delete merged.editArena; delete merged.editCharacterCards; delete merged.editMatchStats; delete merged.addPlayers;
     const patch = {
       indicator_id: indicatorId, settings: merged,
       blue_discord_server_id: typeof incoming.blueDiscordServerId === 'string' ? incoming.blueDiscordServerId.slice(0,100) : existing?.blue_discord_server_id ?? null,
