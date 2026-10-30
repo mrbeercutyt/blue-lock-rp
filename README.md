@@ -24,7 +24,7 @@
 
 1. Создайте проект в Supabase и примените SQL-миграцию `supabase/migrations/202610280001_initial_schema.sql` через SQL Editor.
 2. В Supabase Dashboard → Authentication → Providers включите Discord OAuth и укажите Discord OAuth Client ID/Secret. В Discord Developer Portal добавьте Callback URL, который покажет Supabase для этого провайдера.
-3. В настройках Cloudflare Pages задайте `VITE_SUPABASE_URL` и `VITE_SUPABASE_ANON_KEY` из Supabase (это публичный ключ, защищённый RLS). Не используйте service-role key во frontend.
+3. В настройках Cloudflare Workers Builds для production и previews задайте `VITE_SUPABASE_URL` и `VITE_SUPABASE_ANON_KEY` из Supabase (это публичный ключ, защищённый RLS). После изменения переменных запустите новую сборку. Не используйте service-role key во frontend.
 4. В Supabase Dashboard → Edge Functions разверните `supabase/functions/verify-discord-role/index.ts`. Задайте серверные secrets: `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_ALLOWED_ROLE_IDS` (ID ролей через запятую). Discord-бот должен состоять на нужном сервере и иметь доступ к данным участников.
 5. Добавьте URL сайта в Supabase Authentication → URL Configuration → Redirect URLs. Для локальной разработки добавьте `http://localhost:5173/**`.
 
