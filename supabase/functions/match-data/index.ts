@@ -139,14 +139,14 @@ Deno.serve(async (req: Request) => {
     const { data, error } = await admin.from('match_public_boards').select('board')
       .eq('indicator_id', indicatorId).maybeSingle();
     if (error) return json({ error: 'Database error' }, 500);
-    if (data?.board) return json({ board: { ...data.board, arena: sanitizeArena(data.board?.arena) } });
+    if (data?.board) return json({ board: { ...data.board, arena: sanitizeArena(data.board?.arena) }, registered: !!match });
     const { data: legacy } = await admin.from('match_boards').select('board').eq('indicator_id', indicatorId).maybeSingle();
     const old = legacy?.board;
-    if (!old || !Array.isArray(old.players)) return json({ board: { players: [], ball: {x:50,y:62}, paths: [] } });
+    if (!old || !Array.isArray(old.players)) return json({ board: { players: [], ball: {x:50,y:62}, paths: [] }, registered: !!match });
     return json({ board: {
       players: old.players.map((p: any) => ({ id:p.id, name:p.name, number:p.number, team:p.team, x:p.x, y:p.y, role:p.role, dummy:p.dummy === true })),
       ball: old.ball ?? {x:50,y:62}, paths: Array.isArray(old.paths) ? old.paths : [], arena: sanitizeArena(old.arena),
-    } });
+    }, registered: !!match });
   }
 
   if (action === 'set_official') {
