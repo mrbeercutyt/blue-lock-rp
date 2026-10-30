@@ -171,14 +171,10 @@ Deno.serve(async (req: Request) => {
   if (action === 'get_training_state') {
     if (!match) return json({ error: 'Match not found' }, 404);
     const { data } = await admin.from('match_permissions').select('settings').eq('indicator_id', indicatorId).maybeSingle();
-    let participantRole: string | null = null;
-    if (userId) {
-      const { data: participant } = await admin.from('match_participants').select('match_role').eq('indicator_id', indicatorId).eq('user_id', userId).maybeSingle();
-      participantRole = participant?.match_role ?? null;
-    }
-    const canSeeLog = !!userId && (match.owner_id === userId || participantRole === 'gm');
-    const state = data?.settings?.trainingState ?? { score: [0, 0], half: 1, clock: '00:00', clockRunning: false, eventLog: [] };
-    return json({ state: { score: Array.isArray(state.score) ? state.score : [0,0], half: state.half === 2 ? 2 : 1, clock: /^\\d{2,3}:\\d{2}$/.test(String(state.clock ?? '')) ? state.clock : '00:00', clockRunning: state.clockRunning === true, eventLog: canSeeLog && Array.isArray(state.eventLog) ? state.eventLog.slice(0,100) : [] }, canSeeLog });
+      const state = data?.settings?.trainingState ?? { score: [0, 0], half: 1, clock: '00:00', clockRunning: false, eventLog: [] };
+    // Match state and its public event log are visible to everyone with the match link.
+    // Only the creator/GM may write them (enforced in save_training_state).
+    return json({ state: { score: Array.isArray(state.score) ? state.score : [0,0], half: state.half === 2 ? 2 : 1, clock: /^\\d{2,3}:\\d{2}$/.test(String(state.clock ?? '')) ? state.clock : '00:00', clockRunning: state.clockRunning === true, eventLog: Array.isArray(state.eventLog) ? state.eventLog.slice(0,100) : [] }, canSeeLog: true });
   }
 
   if (action === 'save_training_state') {
