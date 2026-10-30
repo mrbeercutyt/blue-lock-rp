@@ -346,7 +346,7 @@ Deno.serve(async (req: Request) => {
   const { data: participant } = await admin.from('match_participants').select('match_role,team')
     .eq('indicator_id', indicatorId).eq('user_id', userId).maybeSingle();
   const team = (isOwner || participant?.match_role === 'gm') ? 'gm' : (membership?.team ?? participant?.team);
-  if (!team) return json({ error: 'You are not a participant in this match' }, 403);
+  if (!team && action !== 'read_team_stats') return json({ error: 'You are not a participant in this match' }, 403);
 
   if (action === 'save_public') {
     if (team !== 'gm') return json({ error: 'Only the match creator or a GM can update the public board' }, 403);
