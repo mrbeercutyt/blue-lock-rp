@@ -5,24 +5,28 @@ on:
     branches: [main]
     paths:
       - 'src/**'
+      - 'supabase/functions/**'
       - 'supabase/migrations/**'
       - 'docs/**'
       - 'package.json'
       - 'package-lock.json'
       - 'tsconfig*.json'
       - 'vite.config.ts'
+      - '.env.example'
       - '.github/workflows/validate-catalog.yml'
   push:
     branches:
       - 'migration/read-only-catalog-adapter'
     paths:
       - 'src/**'
+      - 'supabase/functions/**'
       - 'supabase/migrations/**'
       - 'docs/**'
       - 'package.json'
       - 'package-lock.json'
       - 'tsconfig*.json'
       - 'vite.config.ts'
+      - '.env.example'
       - '.github/workflows/validate-catalog.yml'
 
 permissions:
