@@ -377,3 +377,10 @@
 .event-log-actions button:hover,.event-delete:hover{border-color:var(--green)}
 /* Character profile is a centered modal above the pitch, not part of the roster sidebar. */
 @media(min-width:1051px){.roster:has(.character-card-modal){position:static;z-index:auto}.match-admin-panel.character-card-modal{position:fixed;z-index:101;left:50%;top:50%;transform:translate(-50%,-50%);width:min(650px,calc(100vw - 40px));max-height:calc(100vh - 48px);overflow-y:auto;margin:0;padding:22px;background:#151a16;border:1px solid #50634f;border-radius:14px;box-shadow:0 24px 90px #000c}.character-card-modal .admin-panel-head{position:sticky;top:-22px;z-index:3;background:#151a16;padding:6px 0 12px}.character-card-modal .character-card-panel{padding-bottom:8px}.character-card-modal .card-overlay-close{width:34px;height:34px;font-size:24px}}
+
+/* The character card always floats over the pitch, on desktop and mobile. */
+.match-admin-panel.character-card-modal{position:fixed!important;z-index:101!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;width:min(650px,calc(100vw - 28px));max-height:calc(100dvh - 32px);overflow-y:auto;margin:0;padding:18px;background:#151a16;border:1px solid #50634f;border-radius:14px;box-shadow:0 24px 90px #000c}
+.character-card-backdrop{display:block!important;position:fixed;inset:0;z-index:100;background:#050805bd;backdrop-filter:blur(4px)}
+.character-card-modal .admin-panel-head{position:sticky;top:-18px;z-index:3;background:#151a16;padding:6px 0 12px}
+.character-card-modal .character-card-panel{padding-bottom:8px}
+@media(max-width:680px){.match-admin-panel.character-card-modal{width:calc(100vw - 20px);max-height:calc(100dvh - 24px);padding:14px}.character-card-modal .admin-panel-head{top:-14px}}
