@@ -17,6 +17,11 @@ on:
 permissions:
   contents: read
 
+# Keep only the newest pending production build; stale commits must not queue old deployments.
+concurrency:
+  group: blue-lock-rp-production
+  cancel-in-progress: true
+
 jobs:
   build-and-deploy:
     name: Build and deploy blue-lock-rp
