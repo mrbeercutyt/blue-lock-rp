@@ -1,85 +1,48 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { supabase, supabaseConfigured } from './supabase';
 
 /**
- * Read-only adapter for the incoming FIFA-style Supabase schema.
+ * Browser adapter for the read-only catalog API.
  *
- * This client is deliberately separate from the existing match/auth project:
- * the new schema does not contain match_boards, match_permissions, or the
- * other tables used by the tactical board. Do not replace the main client
- * with this one during the migration.
- *
- * Only SELECT-based helpers are exposed here. Do not add insert/update/upsert
- * operations while the upstream database is read-only.
+ * All requests go through the existing authenticated Supabase project and its
+ * catalog-read Edge Function. Never query the catalog project directly from
+ * the browser: its service key must remain server-side and private fields must
+ * be filtered by the API.
  */
 
-const url = import.meta.env.VITE_CATALOG_SUPABASE_URL as string | undefined;
-const anonKey = import.meta.env.VITE_CATALOG_SUPABASE_ANON_KEY as string | undefined;
-
-export const catalogSupabaseConfigured = Boolean(url && anonKey);
-
-export const catalogSupabase: SupabaseClient | null = catalogSupabaseConfigured
-  ? createClient(url!, anonKey!, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-      realtime: { params: { eventsPerSecond: 5 } },
-    })
-  : null;
+export const catalogSupabaseConfigured = supabaseConfigured;
 
 export type CatalogCharacter = {
   id: number;
-  discord_id: number | string;
-  guild_id: number | string;
   name: string;
   character_name: string;
-  shot_acc: number;
-  shot_power: number;
-  passing: number;
-  weak_foot: number;
-  dribble: number;
-  control: number;
-  header: number;
-  tackle: number;
-  steal: number;
-  strength: number;
-  jump: number;
-  stamina: number;
-  speed: number;
-  game_read: number;
-  vision: number;
-  points_train: number;
-  points_practice: number;
-  created_at: string;
+  guild_id?: number | string;
+  shot_acc?: number;
+  shot_power?: number;
+  passing?: number;
+  weak_foot?: number;
+  dribble?: number;
+  control?: number;
+  header?: number;
+  tackle?: number;
+  steal?: number;
+  strength?: number;
+  jump?: number;
+  stamina?: number;
+  speed?: number;
+  game_read?: number;
+  vision?: number;
+  points_train?: number;
+  points_practice?: number;
+  created_at?: string;
 };
 
 export type CatalogTeam = {
   id: number;
   name: string;
-  owner_id: number | string;
-  vice_captain_id: number | string | null;
-  budget: number | string;
-  created_at: string;
-};
-
-export type CatalogTeamPlayer = {
-  id: number;
-  discord_id: number | string;
-  team_id: number;
-  joined_at: string;
-};
-
-export type CatalogPlayerCost = {
-  id: number;
-  discord_id: number | string;
-  cost: number | string;
-  updated_at: string;
+  created_at?: string;
 };
 
 export type CatalogCareerStats = {
-  id: number;
-  discord_id: number | string;
   goals: number;
   assists: number;
   saves: number;
@@ -93,8 +56,8 @@ export type CatalogCareerStats = {
   mvp_match: number;
   goals_outside_box: number;
   penalties_scored: number;
-  updated_at: string;
-  created_at: string;
+  updated_at?: string;
+  created_at?: string;
 };
 
 export type CatalogReadResult<T> = {
@@ -102,97 +65,62 @@ export type CatalogReadResult<T> = {
   error: Error | null;
 };
 
-function unavailable<T>(): CatalogReadResult<T> {
-  return {
-    data: null,
-    error: new Error(
-      'Каталог не настроен. Укажи VITE_CATALOG_SUPABASE_URL и VITE_CATALOG_SUPABASE_ANON_KEY.',
-    ),
-  };
-}
-
-/** Read characters; optional guildId limits the result to one Discord server. */
-export async function listCatalogCharacters(
-  guildId?: string | number,
-): Promise<CatalogReadResult<CatalogCharacter[]>> {
-  if (!catalogSupabase) return unavailable<CatalogCharacter[]>();
-
-  let query = catalogSupabase
-    .from('characters')
-    .select('*')
-    .order('character_name', { ascending: true });
-
-  if (guildId !== undefined && String(guildId).trim()) {
-    query = query.eq('guild_id', String(guildId));
+async function invokeCatalog<T>(action: string): Promise<CatalogReadResult<T>> {
+  if (!supabase) {
+    return { data: null, error: new Error('Сначала настрой переменные основного Supabase-проекта.') };
   }
-
-  const { data, error } = await query;
-  return { data: data as CatalogCharacter[] | null, error };
+  const { data, error } = await supabase.functions.invoke('catalog-read', { body: { action } });
+  if (error) return { data: null, error };
+  if (data?.error) return { data: null, error: new Error(String(data.error)) };
+  return { data: data as T, error: null };
 }
 
+/** Requires a valid Discord-authenticated session; returns only approved public fields. */
+export async function listCatalogCharacters(
+  _guildId?: string | number,
+): Promise<CatalogReadResult<CatalogCharacter[]>> {
+  const result = await invokeCatalog<{ characters: CatalogCharacter[] }>('list_characters');
+  return { data: result.data?.characters ?? null, error: result.error };
+}
+
+/** The server derives the Discord ID from the verified session; caller IDs are never trusted. */
 export async function getCatalogCharacter(
-  discordId: string | number,
+  _discordId?: string | number,
 ): Promise<CatalogReadResult<CatalogCharacter>> {
-  if (!catalogSupabase) return unavailable<CatalogCharacter>();
-
-  const { data, error } = await catalogSupabase
-    .from('characters')
-    .select('*')
-    .eq('discord_id', String(discordId))
-    .maybeSingle();
-
-  return { data: data as CatalogCharacter | null, error };
+  const result = await invokeCatalog<{ character: CatalogCharacter | null }>('my_character');
+  return { data: result.data?.character ?? null, error: result.error };
 }
 
 export async function listCatalogTeams(): Promise<CatalogReadResult<CatalogTeam[]>> {
-  if (!catalogSupabase) return unavailable<CatalogTeam[]>();
-
-  const { data, error } = await catalogSupabase
-    .from('teams')
-    .select('*')
-    .order('name', { ascending: true });
-
-  return { data: data as CatalogTeam[] | null, error };
-}
-
-export async function getCatalogTeamRoster(
-  teamId: number,
-): Promise<CatalogReadResult<CatalogTeamPlayer[]>> {
-  if (!catalogSupabase) return unavailable<CatalogTeamPlayer[]>();
-
-  const { data, error } = await catalogSupabase
-    .from('team_players')
-    .select('*')
-    .eq('team_id', teamId)
-    .order('joined_at', { ascending: true });
-
-  return { data: data as CatalogTeamPlayer[] | null, error };
-}
-
-export async function getCatalogPlayerCost(
-  discordId: string | number,
-): Promise<CatalogReadResult<CatalogPlayerCost>> {
-  if (!catalogSupabase) return unavailable<CatalogPlayerCost>();
-
-  const { data, error } = await catalogSupabase
-    .from('player_costs')
-    .select('*')
-    .eq('discord_id', String(discordId))
-    .maybeSingle();
-
-  return { data: data as CatalogPlayerCost | null, error };
+  const result = await invokeCatalog<{ teams: CatalogTeam[] }>('list_teams');
+  return { data: result.data?.teams ?? null, error: result.error };
 }
 
 export async function getCatalogCareerStats(
-  discordId: string | number,
+  _discordId?: string | number,
 ): Promise<CatalogReadResult<CatalogCareerStats>> {
-  if (!catalogSupabase) return unavailable<CatalogCareerStats>();
+  const result = await invokeCatalog<{ stats: CatalogCareerStats | null }>('my_career_stats');
+  return { data: result.data?.stats ?? null, error: result.error };
+}
 
-  const { data, error } = await catalogSupabase
-    .from('career_stats')
-    .select('*')
-    .eq('discord_id', String(discordId))
-    .maybeSingle();
+/**
+ * Costs, transfers, offers and raw rosters are deliberately not exposed until
+ * an explicit visibility policy and authorization rule have been approved.
+ */
+export async function getCatalogPlayerCost(
+  _discordId?: string | number,
+): Promise<CatalogReadResult<never>> {
+  return {
+    data: null,
+    error: new Error('Стоимость игрока пока недоступна через публичный каталог API.'),
+  };
+}
 
-  return { data: data as CatalogCareerStats | null, error };
+export async function getCatalogTeamRoster(
+  _teamId: number,
+): Promise<CatalogReadResult<never>> {
+  return {
+    data: null,
+    error: new Error('Составы команд пока не открыты до настройки правил доступа.'),
+  };
 }
