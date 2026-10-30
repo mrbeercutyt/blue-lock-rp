@@ -25,12 +25,16 @@ It does not define the tactical-match tables above. Do not point the primary Sup
 
 It currently exposes read-only helpers for characters, teams, team rosters, player costs, and career stats. It intentionally contains no insert, update, upsert, or delete methods.
 
-The new project has Row Level Security enabled. The read helpers will only work once the database owner has configured SELECT policies (or suitable read-only views) for the intended roles. A configured URL/key does not bypass RLS.
+## Verified access state
+
+The catalog project has Row Level Security enabled on all seven tables. A read-only inspection of `pg_policies` found **no policies in the public schema** at the time of review. The tables are also currently empty.
+
+This means the frontend should not yet depend on catalog reads: anonymous/publishable keys do not bypass RLS, and queries will not return data until the database owner defines the intended SELECT policies or provides suitable read-only views. Do not disable RLS just to make the adapter work.
 
 ## Current limitations / next steps
 
-1. Connect the adapter to the UI in a controlled feature-by-feature way, starting with profile/character display.
-2. Decide how Discord OAuth identity maps to the catalog's `characters.discord_id`; do not assume Supabase auth user UUID equals a Discord ID.
-3. Determine where match boards, participants, permissions, and live training state will live during and after migration.
-4. Add and test explicit read policies before pointing any production UI at the external database.
+1. Add and test explicit read policies with the database owner before pointing any UI at the catalog.
+2. Connect the adapter to the UI in a controlled feature-by-feature way, starting with profile/character display after read access is confirmed.
+3. Decide how Discord OAuth identity maps to the catalog's `characters.discord_id`; do not assume Supabase auth user UUID equals a Discord ID.
+4. Determine where match boards, participants, permissions, and live training state will live during and after migration.
 5. Keep all writes disabled for the catalog while the external database is read-only.
