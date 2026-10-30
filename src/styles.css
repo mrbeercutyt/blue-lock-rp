@@ -329,3 +329,35 @@
 /* Desktop character cards open as a centered overlay; the roster stays clean. */
 @media (min-width:1051px){.layout:has(.details.details-hidden){grid-template-columns:260px minmax(360px,1fr)}.details.details-hidden{display:none}.details.details-overlay-open{display:block;position:fixed;z-index:101;top:50%;left:50%;transform:translate(-50%,-50%);width:min(560px,calc(100vw - 40px));max-height:calc(100vh - 48px);overflow-y:auto;padding:22px;background:#151a16;border:1px solid #50634f;border-radius:14px;box-shadow:0 24px 90px #000c}.details.details-overlay-open .close-details{display:inline-flex}.details.details-overlay-open .details-heading-icon{display:none}.details.details-overlay-open .panel-heading{position:sticky;top:-22px;z-index:2;background:#151a16;padding:6px 0 12px;margin-bottom:14px;border-bottom:1px solid var(--line)}.character-overlay-backdrop{position:fixed;inset:0;z-index:100;background:#050805bd;backdrop-filter:blur(4px)}}
 @media (max-width:1050px){.details.details-hidden{display:none}.character-overlay-backdrop{display:none}}
+
+
+/* Global official-match directory and notification panel */
+.topbar .brand>span:last-child{white-space:nowrap;letter-spacing:.035em;font-size:clamp(10px,1.05vw,14px)}
+.top-actions{gap:8px}
+.official-matches-trigger,.notification-trigger{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:34px;padding:0 11px;border:1px solid var(--line);border-radius:7px;background:#1b241c;color:#dce8d8;font-size:10px;font-weight:800;white-space:nowrap;cursor:pointer}
+.official-matches-trigger:hover,.notification-trigger:hover{border-color:var(--green);color:var(--green)}
+.notification-trigger{width:36px;padding:0;font-size:22px}
+.notification-trigger i{position:absolute;right:-5px;top:-6px;display:grid;place-items:center;min-width:17px;height:17px;padding:0 4px;border-radius:10px;background:var(--green);color:#111;font-size:9px;font-style:normal}
+.global-modal-backdrop{position:fixed;inset:0;z-index:200;background:#050805c9;backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:18px}
+.global-modal{width:min(620px,100%);max-height:min(780px,calc(100dvh - 36px));overflow:auto;padding:22px;background:#151a16;border:1px solid #465744;border-radius:14px;box-shadow:0 24px 100px #000c}
+.global-modal-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:15px}
+.global-modal-head small{color:var(--green);font-size:9px;letter-spacing:.14em;font-weight:800}
+.global-modal-head h2{margin:3px 0 0;font-size:23px}
+.global-modal-head .icon{font-size:22px}
+.official-match-row{display:flex;width:100%;align-items:center;justify-content:space-between;gap:14px;padding:14px 12px;margin:7px 0;border:1px solid var(--line);border-radius:9px;background:#1b231c;color:#edf4e9;text-align:left;cursor:pointer}
+.official-match-row:hover{border-color:var(--green);background:#222e22}
+.official-match-row span{display:grid;gap:5px;min-width:0}
+.official-match-row b{font-size:13px}
+.official-match-row small{color:var(--muted);font-size:10px}
+.official-match-row strong{color:var(--green);font-size:10px;white-space:nowrap}
+.empty-official{padding:26px 10px;text-align:center;color:var(--muted);font-size:12px}
+.official-refresh{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:#202a20;color:var(--green);cursor:pointer}
+.notification-popover{position:fixed;right:18px;top:76px;z-index:220;width:min(350px,calc(100vw - 24px));padding:14px;background:#151a16;border:1px solid #465744;border-radius:12px;box-shadow:0 18px 60px #000b}
+.notification-popover .global-modal-head{margin-bottom:8px}
+.notification-popover>button:not(.icon){display:grid;gap:5px;width:100%;padding:11px;margin-top:7px;text-align:left;border:1px solid var(--line);border-radius:8px;background:#1b231c;color:#eff6eb;cursor:pointer}
+.notification-popover>button b{font-size:11px;color:var(--green)}
+.notification-popover>button span,.notification-popover p{font-size:11px;color:#aab7aa}
+.participant-role-gm{color:var(--green);font-size:11px;letter-spacing:.06em}
+.participant-role-creator{color:#8fd9ff;font-size:11px}
+@media(max-width:1050px){.topbar .brand>span:last-child{max-width:38vw;overflow:hidden;text-overflow:ellipsis}.top-actions{gap:4px}.official-matches-trigger{max-width:105px;padding:0 7px;font-size:9px}.notification-trigger{width:31px;min-width:31px}.global-modal{padding:16px}}
+@media(max-width:680px){.topbar .brand>span:last-child{display:none}.top-actions .official-matches-trigger{max-width:92px;white-space:normal;line-height:1.1}.top-actions .discord-auth{max-width:100px}.notification-popover{right:8px;top:64px}}
