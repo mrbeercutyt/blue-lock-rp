@@ -121,7 +121,7 @@ Deno.serve(async (req: Request) => {
     const incoming = body?.board;
     if (!incoming || !Array.isArray(incoming.players) || !incoming.ball || !Array.isArray(incoming.paths)) return json({ error: 'Invalid board payload' }, 400);
     const safe = {
-      players: incoming.players.map((p: any) => ({ id:p.id, name:p.name, number:p.number, team:p.team, x:p.x, y:p.y, role:p.role })),
+      players: incoming.players.map((p: any) => ({ id:p.id, name:p.name, number:p.number, team:p.team, x:p.x, y:p.y, role:p.role, dummy:p.dummy === true })),
       ball: incoming.ball,
       paths: incoming.paths,
       arena: sanitizeArena(incoming.arena),
@@ -267,7 +267,7 @@ Deno.serve(async (req: Request) => {
     const old = legacy?.board;
     if (!old || !Array.isArray(old.players)) return json({ board: { players: [], ball: {x:50,y:62}, paths: [] } });
     const safe = {
-      players: old.players.map((p: any) => ({ id:p.id, name:p.name, number:p.number, team:p.team, x:p.x, y:p.y, role:p.role })),
+      players: old.players.map((p: any) => ({ id:p.id, name:p.name, number:p.number, team:p.team, x:p.x, y:p.y, role:p.role, dummy:p.dummy === true })),
       ball: old.ball ?? {x:50,y:62},
       paths: Array.isArray(old.paths) ? old.paths : [],
       arena: sanitizeArena(old.arena),
