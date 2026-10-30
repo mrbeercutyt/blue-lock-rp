@@ -292,7 +292,7 @@ Deno.serve(async (req: Request) => {
       return json({ error: 'Invalid board payload' }, 400);
     }
     const safe = {
-      players: board.players.map((p: any) => ({ id:p.id, name:p.name, number:p.number, team:p.team, x:p.x, y:p.y, role:p.role })),
+      players: board.players.map((p: any) => ({ id:p.id, name:p.name, number:p.number, team:p.team, x:p.x, y:p.y, role:p.role, dummy:p.dummy === true })),
       ball: board.ball,
       paths: board.paths,
       arena: sanitizeArena(board.arena),
