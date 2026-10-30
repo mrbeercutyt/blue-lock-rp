@@ -47,3 +47,9 @@ jobs:
         run: npm install
       - name: Build frontend
         run: npm run build
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check catalog Edge Function
+        run: deno check supabase/functions/catalog-read/index.ts
