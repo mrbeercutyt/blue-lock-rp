@@ -457,7 +457,10 @@ Deno.serve(async (req: Request) => {
   }
 
   if (action === 'set_participant_role') {
-    if (!userId || !isOwner) return json({ error: 'Only the match creator can manage match roles' }, userId ? 403 : 401);
+    if (!userId) return json({ error: 'Sign-in required' }, 401);
+    const { data: managerParticipant } = await admin.from('match_participants').select('match_role').eq('indicator_id', indicatorId).eq('user_id', userId).maybeSingle();
+    const canManageParticipants = isOwner || managerParticipant?.match_role === 'gm';
+    if (!canManageParticipants) return json({ error: 'Only the board creator or a Discord GM can manage match roles' }, 403);
     const targetUserId = typeof body?.userId === 'string' ? body.userId : '';
     const role = body?.matchRole;
     const participantTeam = ['blue','red'].includes(body?.team) ? body.team : null;
