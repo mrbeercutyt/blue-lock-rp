@@ -74,3 +74,13 @@
 .participant-character-link{display:grid;gap:5px;margin-top:8px;font-size:10px;color:var(--muted)}
 .participant-character-link select{width:100%;max-width:260px;padding:7px;background:#101510;border:1px solid var(--line);border-radius:4px;color:#e9eee9;font-size:11px}
 @media(max-width:640px){.participant-character-link select{max-width:100%}.person-row{min-width:0;overflow-wrap:anywhere}}
+
+/* Match people panel: compact, readable in the narrow sidebar. */
+.person-row{grid-template-columns:minmax(0,1fr);gap:8px;min-width:0;overflow:hidden}
+.person-row>span{display:block;min-width:0;overflow-wrap:normal;word-break:normal}
+.person-row>span>b{display:block;overflow-wrap:anywhere;word-break:normal;line-height:1.35}
+.person-row>span>small{overflow-wrap:anywhere;word-break:break-word;line-height:1.35}
+.person-row select,.person-row .participant-character-link{width:100%;min-width:0;max-width:100%}
+.person-row .participant-character-link{display:grid;gap:5px;color:var(--muted);font-size:12px}
+.people-tab-intro{font-size:12px;line-height:1.5;color:var(--muted);padding:2px 4px}
+.people-tab-intro p{margin:6px 0}
