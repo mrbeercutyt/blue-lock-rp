@@ -112,3 +112,19 @@
 
 /* On mobile, the character card floats above the left roster drawer with a small offset */
 @media(max-width:1050px){.roster.mobile-open .match-admin-panel:has(.character-card-panel){position:fixed;z-index:75;top:72px;left:18px;right:10px;bottom:74px;width:auto;max-height:none;overflow-y:auto;margin:0;padding:22px 14px 18px;background:#151a16;border:1px solid #50634f;border-radius:14px;box-shadow:0 18px 55px #000b}.roster.mobile-open .match-admin-panel:has(.character-card-panel) .admin-panel-head{position:sticky;top:-22px;z-index:2;display:flex;align-items:center;min-height:42px;margin:-22px -14px 14px;padding:12px 12px 10px 48px;background:#151a16;border-bottom:1px solid var(--line)}.roster.mobile-open .match-admin-panel:has(.character-card-panel) .admin-panel-head b{font-size:12px;line-height:1.35}.roster.mobile-open .match-admin-panel:has(.character-card-panel) .admin-panel-head .card-overlay-close{position:absolute;left:8px;top:8px;width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;font-size:25px;line-height:1;border-radius:9px}.roster.mobile-open .match-admin-panel:has(.character-card-panel) .character-card-panel{min-width:0}}
+
+
+/* Roster search, keyboard-first controls and clearer empty states */
+.roster-search{display:grid;grid-template-columns:minmax(0,1fr) 28px 24px;align-items:center;gap:5px;margin:0 0 12px;padding:5px 6px;border:1px solid #354237;border-radius:7px;background:#101510;transition:border-color .18s,box-shadow .18s}
+.roster-search:focus-within{border-color:#86b85b;box-shadow:0 0 0 3px #b5f36a12}
+.roster-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#e9eee9;font:500 11px Inter,system-ui,sans-serif;padding:6px 3px}
+.roster-search input::placeholder{color:#728073}
+.roster-search>span{display:grid;place-items:center;min-width:24px;height:24px;border-radius:5px;background:#263226;color:var(--green);font:700 10px 'Barlow Condensed',sans-serif}
+.roster-search button{display:grid;place-items:center;width:24px;height:24px;padding:0;border:0;border-radius:5px;background:#263226;color:#c9d4c8;font-size:17px;line-height:1}
+.roster-search button:hover{background:#3a4939;color:white}
+.roster-empty,.observer-note{padding:10px;border:1px dashed #39473a;border-radius:7px;color:#9aa89a;font-size:11px;line-height:1.55}
+.observer-note{background:#1b241c;border-style:solid;border-color:#344336;color:#b5c3b5}
+.player-select{transition:background .16s,border-color .16s,transform .16s}
+.player-select:active{transform:scale(.985)}
+@media(max-width:1050px){.roster-search input{font-size:16px}.roster-search{padding:6px}.roster-search>span{height:28px}.roster-search button{width:28px;height:28px}}
+@media(prefers-reduced-motion:reduce){.roster-search,.player-select{transition:none}}
