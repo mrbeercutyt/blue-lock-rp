@@ -109,11 +109,42 @@ Deno.serve(async (req: Request) => {
   try { body = await req.json(); } catch { return json({ error: 'Invalid JSON body' }, 400); }
   const action = body?.action;
   const indicatorId = typeof body?.indicatorId === 'string' ? body.indicatorId.trim() : '';
+  if (action === 'list_official') {
+    const { data: rows, error } = await admin.from('match_permissions').select('indicator_id,settings,updated_at');
+    if (error) return json({ error: 'Could not load official matches' }, 500);
+    const active = (rows ?? []).map((row: any) => ({ indicator_id: row.indicator_id, state: row.settings?.officialMatch }))
+      .filter((row: any) => row.state?.active === true);
+    const matches = await Promise.all(active.map(async (row: any) => {
+      const { data: board } = await admin.from('match_boards').select('name').eq('indicator_id', row.indicator_id).maybeSingle();
+      return { indicator_id: row.indicator_id, official_id: row.state.id, title: row.state.title ?? 'Официальный матч', name: board?.name ?? 'Матч', started_at: row.state.started_at ?? null };
+    }));
+    return json({ matches: matches.sort((a: any, b: any) => String(b.started_at ?? '').localeCompare(String(a.started_at ?? '')) ) });
+  }
+
   if (!indicatorId || indicatorId.length > 128) return json({ error: 'indicatorId is required' }, 400);
 
   const { data: match, error: matchError } = await admin.from('match_boards')
     .select('indicator_id,owner_id,name').eq('indicator_id', indicatorId).maybeSingle();
   if (matchError) return json({ error: 'Database error' }, 500);
+
+  if (action === 'set_official') {
+    if (!userId) return json({ error: 'Sign-in required' }, 401);
+    if (!match) return json({ error: 'Match not found' }, 404);
+    const isGlobalGM = await hasConfiguredDiscordEditorRole(admin, userId);
+    if (!isGlobalGM) return json({ error: 'Only users with a configured Discord GM role can manage official matches' }, 403);
+    const active = body?.official === true;
+    const { data: existing } = await admin.from('match_permissions').select('settings').eq('indicator_id', indicatorId).maybeSingle();
+    const settings = { ...(existing?.settings ?? {}), officialMatch: active ? {
+      active: true,
+      id: crypto.randomUUID(),
+      title: typeof body?.title === 'string' ? body.title.trim().slice(0, 120) : 'Официальный матч',
+      started_at: new Date().toISOString(),
+      started_by: userId,
+    } : { active: false, ended_at: new Date().toISOString() } };
+    const { error } = await admin.from('match_permissions').upsert({ indicator_id: indicatorId, settings, updated_at: new Date().toISOString() }, { onConflict: 'indicator_id' });
+    if (error) return json({ error: 'Could not update official match status' }, 500);
+    return json({ ok: true, officialMatch: settings.officialMatch });
+  }
 
   if (action === 'create_match') {
     if (!userId) return json({ error: 'Sign-in required' }, 401);
@@ -205,10 +236,14 @@ Deno.serve(async (req: Request) => {
     if (!match) return json({ error: 'Match not found' }, 404);
     const { data: existing } = await admin.from('match_participants')
       .select('match_role,team').eq('indicator_id', indicatorId).eq('user_id', userId).maybeSingle();
-    if (match.owner_id === userId || existing?.match_role === 'creator' || existing?.match_role === 'gm') {
-      const role = match.owner_id === userId ? 'creator' : existing.match_role;
-      await admin.from('match_participants').upsert({ indicator_id: indicatorId, user_id: userId, match_role: role, team: null }, { onConflict: 'indicator_id,user_id' });
-      return json({ role, team: null });
+    if (match.owner_id === userId) {
+      await admin.from('match_participants').upsert({ indicator_id: indicatorId, user_id: userId, match_role: 'creator', team: null }, { onConflict: 'indicator_id,user_id' });
+      return json({ role: 'creator', team: null });
+    }
+    if (await hasConfiguredDiscordEditorRole(admin, userId)) {
+      await admin.from('match_participants').upsert({ indicator_id: indicatorId, user_id: userId, match_role: 'gm', team: null }, { onConflict: 'indicator_id,user_id' });
+      await admin.from('match_members').delete().eq('indicator_id', indicatorId).eq('user_id', userId);
+      return json({ role: 'gm', team: null });
     }
     const { data: config } = await admin.from('match_permissions')
       .select('blue_discord_server_id,blue_discord_role_id,red_discord_server_id,red_discord_role_id')
@@ -386,8 +421,8 @@ Deno.serve(async (req: Request) => {
     const targetUserId = typeof body?.userId === 'string' ? body.userId : '';
     const role = body?.matchRole;
     const participantTeam = ['blue','red'].includes(body?.team) ? body.team : null;
-    if (!targetUserId || !['gm','player','spectator'].includes(role)) {
-      return json({ error: 'Valid userId and matchRole are required' }, 400);
+    if (!targetUserId || !['player','spectator'].includes(role)) {
+      return json({ error: 'Only player or spectator roles can be assigned manually; GM access comes from Discord roles' }, 400);
     }
     const { error } = await admin.from('match_participants').upsert({
       indicator_id: indicatorId, user_id: targetUserId, match_role: role,
@@ -414,7 +449,9 @@ Deno.serve(async (req: Request) => {
   }
 
   if (action === 'save_match_settings') {
-    if (!userId || !isOwner) return json({ error: 'Only the match creator can edit match settings' }, userId ? 403 : 401);
+    if (!userId) return json({ error: 'Sign-in required' }, 401);
+    const canManageSettings = isOwner || await hasConfiguredDiscordEditorRole(admin, userId);
+    if (!canManageSettings) return json({ error: 'Only the match creator or a Discord GM can edit match settings' }, 403);
     const incoming = body?.settings;
     if (!incoming || typeof incoming !== 'object') return json({ error: 'Settings object is required' }, 400);
     const allowed = ['playersMoveOwn','captainBlue','captainRed','editArena','manageParticipants','editCharacterCards','editMatchStats','viewOwnTeamStats','viewOpponentStats','viewAllStats','editScore','editClock','editPaths','addPlayers'];
