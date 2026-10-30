@@ -38,7 +38,7 @@ jobs:
           cache-dependency-path: package.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --include=optional --no-audit --no-fund
 
       - name: Build frontend
         env:
