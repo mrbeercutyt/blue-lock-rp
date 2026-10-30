@@ -264,14 +264,15 @@ Deno.serve(async (req: Request) => {
     if (!match) return json({ error: 'Match not found' }, 404);
     const { data: existing } = await admin.from('match_participants')
       .select('match_role,team').eq('indicator_id', indicatorId).eq('user_id', userId).maybeSingle();
-    if (match.owner_id === userId) {
-      await admin.from('match_participants').upsert({ indicator_id: indicatorId, user_id: userId, match_role: 'creator', team: null }, { onConflict: 'indicator_id,user_id' });
-      return json({ role: 'creator', team: null });
-    }
-    if (await hasConfiguredDiscordEditorRole(admin, userId)) {
+    const isGlobalGM = await hasConfiguredDiscordEditorRole(admin, userId);
+    if (isGlobalGM) {
       await admin.from('match_participants').upsert({ indicator_id: indicatorId, user_id: userId, match_role: 'gm', team: null }, { onConflict: 'indicator_id,user_id' });
       await admin.from('match_members').delete().eq('indicator_id', indicatorId).eq('user_id', userId);
-      return json({ role: 'gm', team: null });
+      return json({ role: 'gm', team: null, isOwner: match.owner_id === userId });
+    }
+    if (match.owner_id === userId) {
+      await admin.from('match_participants').upsert({ indicator_id: indicatorId, user_id: userId, match_role: 'creator', team: null }, { onConflict: 'indicator_id,user_id' });
+      return json({ role: 'creator', team: null, isOwner: true });
     }
     const { data: config } = await admin.from('match_permissions')
       .select('blue_discord_server_id,blue_discord_role_id,red_discord_server_id,red_discord_role_id')
@@ -432,6 +433,7 @@ Deno.serve(async (req: Request) => {
       const metadata = authData?.user?.user_metadata ?? {};
       return {
         ...row,
+        is_creator: row.user_id === match.owner_id,
         display_name: metadata.full_name ?? metadata.name ?? metadata.user_name ?? metadata.preferred_username ?? row.user_id,
         discord_username: metadata.custom_claims?.global_name ?? metadata.global_name ?? metadata.user_name ?? null,
       };
