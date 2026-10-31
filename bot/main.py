@@ -410,5 +410,189 @@ async def transfers_command(interaction: discord.Interaction):
         await interaction.response.send_message(fail(exc), ephemeral=True)
 
 
+
+CAREER_FIELDS = {
+    "goals": "Голы", "assists": "Голевые передачи", "saves": "Сейвы", "pushkas": "Пушкасы",
+    "forward_of_season": "Лучший нападающий сезона", "midfielder_of_season": "Лучший полузащитник сезона",
+    "defender_of_season": "Лучший защитник сезона", "golden_glove": "Золотая перчатка",
+    "league_cup": "Кубок лиги", "mvp_season": "MVP сезона", "mvp_match": "MVP матча",
+    "goals_outside_box": "Голы из-за штрафной", "penalties_scored": "Забитые пенальти",
+}
+
+
+@bot.tree.command(name="career", description="Посмотреть карьерную статистику игрока")
+@app_commands.describe(discord_id="Discord ID игрока")
+async def career_command(interaction: discord.Interaction, discord_id: str):
+    if not await guard(interaction):
+        return
+    try:
+        player_id = num(discord_id, "Discord ID", 1, 9223372036854775807)
+        rows = db.table("career_stats").select("*").eq("discord_id", player_id).limit(1).execute().data or []
+        if not rows:
+            await interaction.response.send_message("Для игрока статистики пока нет. Используй /career-set, чтобы добавить значение.", ephemeral=True)
+            return
+        row = rows[0]
+        embed = discord.Embed(title=f"Карьерная статистика · {player_id}", color=discord.Color.gold())
+        for key, label in CAREER_FIELDS.items():
+            embed.add_field(name=label, value=str(row.get(key, 0)), inline=True)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+    except ValueError as exc:
+        await interaction.response.send_message(str(exc), ephemeral=True)
+    except Exception as exc:
+        await interaction.response.send_message(fail(exc), ephemeral=True)
+
+
+@bot.tree.command(name="career-set", description="Изменить значение карьерной статистики")
+@app_commands.describe(discord_id="Discord ID игрока", field="Статистика", value="Новое целое значение")
+@app_commands.choices(field=[app_commands.Choice(name=label, value=key) for key, label in CAREER_FIELDS.items()])
+async def career_set_command(interaction: discord.Interaction, discord_id: str, field: app_commands.Choice[str], value: str):
+    if not await guard(interaction):
+        return
+    try:
+        player_id = num(discord_id, "Discord ID", 1, 9223372036854775807)
+        new_value = num(value, "Значение", 0, 2_000_000_000)
+        existing = db.table("career_stats").select("id").eq("discord_id", player_id).execute().data or []
+        if existing:
+            db.table("career_stats").update({field.value: new_value}).eq("discord_id", player_id).execute()
+        else:
+            db.table("career_stats").insert({"discord_id": player_id, field.value: new_value}).execute()
+        await interaction.response.send_message(f"{CAREER_FIELDS[field.value]} игрока {player_id}: **{new_value}**.", ephemeral=True)
+    except ValueError as exc:
+        await interaction.response.send_message(str(exc), ephemeral=True)
+    except Exception as exc:
+        await interaction.response.send_message(fail(exc), ephemeral=True)
+
+
+@bot.tree.command(name="roster", description="Посмотреть состав клуба")
+@app_commands.describe(team_id="ID клуба")
+async def roster_command(interaction: discord.Interaction, team_id: str):
+    if not await guard(interaction):
+        return
+    try:
+        selected_team = num(team_id, "ID клуба", 1, 2_000_000_000)
+        teams = db.table("teams").select("id,name").eq("id", selected_team).limit(1).execute().data or []
+        if not teams:
+            await interaction.response.send_message("Клуб не найден.", ephemeral=True)
+            return
+        players = db.table("team_players").select("discord_id,joined_at").eq("team_id", selected_team).order("joined_at").limit(50).execute().data or []
+        embed = discord.Embed(title=f"Состав · {teams[0]['name']}", description=f"Клуб #{selected_team} · игроков: {len(players)}", color=discord.Color.green())
+        embed.add_field(name="Discord ID игроков", value="\n".join(str(p["discord_id"]) for p in players) if players else "Состав пуст.", inline=False)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+    except ValueError as exc:
+        await interaction.response.send_message(str(exc), ephemeral=True)
+    except Exception as exc:
+        await interaction.response.send_message(fail(exc), ephemeral=True)
+
+
+@bot.tree.command(name="roster-add", description="Добавить зарегистрированного игрока в клуб")
+@app_commands.describe(team_id="ID клуба", discord_id="Discord ID игрока")
+async def roster_add_command(interaction: discord.Interaction, team_id: str, discord_id: str):
+    if not await guard(interaction):
+        return
+    try:
+        selected_team = num(team_id, "ID клуба", 1, 2_000_000_000)
+        player_id = num(discord_id, "Discord ID", 1, 9223372036854775807)
+        teams = db.table("teams").select("id,name").eq("id", selected_team).limit(1).execute().data or []
+        if not teams:
+            await interaction.response.send_message("Клуб не найден.", ephemeral=True)
+            return
+        characters = db.table("characters").select("discord_id").eq("discord_id", player_id).limit(1).execute().data or []
+        if not characters:
+            await interaction.response.send_message("Сначала зарегистрируй персонажа с этим Discord ID.", ephemeral=True)
+            return
+        db.table("team_players").insert({"team_id": selected_team, "discord_id": player_id}).execute()
+        await interaction.response.send_message(f"Игрок {player_id} добавлен в клуб **{teams[0]['name']}**.", ephemeral=True)
+    except ValueError as exc:
+        await interaction.response.send_message(str(exc), ephemeral=True)
+    except Exception as exc:
+        await interaction.response.send_message("Не удалось добавить игрока: возможно, он уже состоит в клубе. " + fail(exc), ephemeral=True)
+
+
+@bot.tree.command(name="roster-remove", description="Убрать игрока из состава клуба")
+@app_commands.describe(discord_id="Discord ID игрока")
+async def roster_remove_command(interaction: discord.Interaction, discord_id: str):
+    if not await guard(interaction):
+        return
+    try:
+        player_id = num(discord_id, "Discord ID", 1, 9223372036854775807)
+        result = db.table("team_players").delete().eq("discord_id", player_id).execute()
+        await interaction.response.send_message("Игрок исключён из состава." if result.data else "Игрок не найден в составах клубов.", ephemeral=True)
+    except ValueError as exc:
+        await interaction.response.send_message(str(exc), ephemeral=True)
+    except Exception as exc:
+        await interaction.response.send_message(fail(exc), ephemeral=True)
+
+
+class SetTeamBudget(discord.ui.Modal, title="Изменение бюджета клуба"):
+    team_id = discord.ui.TextInput(label="ID клуба", max_length=10)
+    budget = discord.ui.TextInput(label="Новый бюджет", max_length=16)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        if not await guard(interaction):
+            return
+        try:
+            selected_team = num(self.team_id.value, "ID клуба", 1, 2_000_000_000)
+            budget = num(self.budget.value, "Бюджет", 0, 9_000_000_000_000_000)
+            result = db.table("teams").update({"budget": budget}).eq("id", selected_team).execute()
+            if not result.data:
+                await interaction.response.send_message("Клуб не найден.", ephemeral=True)
+                return
+            await interaction.response.send_message(f"Бюджет клуба **{result.data[0]['name']}** установлен: {budget:,}".replace(",", " "), ephemeral=True)
+        except ValueError as exc:
+            await interaction.response.send_message(str(exc), ephemeral=True)
+        except Exception as exc:
+            await interaction.response.send_message(fail(exc), ephemeral=True)
+
+
+@bot.tree.command(name="team-budget", description="Изменить бюджет клуба через форму")
+async def team_budget_command(interaction: discord.Interaction):
+    if not await guard(interaction):
+        return
+    await interaction.response.send_modal(SetTeamBudget())
+
+
+@bot.tree.command(name="stat-set", description="Изменить любую характеристику персонажа")
+@app_commands.describe(discord_id="Discord ID игрока", stat="Характеристика", value="Новое значение от 0 до 100 (слабая нога: 0–5)")
+@app_commands.choices(stat=[app_commands.Choice(name=label, value=key) for key, label in zip(STAT_FIELDS, STAT_LABELS)])
+async def stat_set_command(interaction: discord.Interaction, discord_id: str, stat: app_commands.Choice[str], value: str):
+    if not await guard(interaction):
+        return
+    try:
+        player_id = num(discord_id, "Discord ID", 1, 9223372036854775807)
+        maximum = 5 if stat.value == "weak_foot" else 100
+        new_value = num(value, "Значение", 0, maximum)
+        result = db.table("characters").update({stat.value: new_value}).eq("discord_id", player_id).execute()
+        if not result.data:
+            await interaction.response.send_message("Персонаж не найден.", ephemeral=True)
+            return
+        await interaction.response.send_message(f"«{stat.name}» игрока {player_id}: **{new_value}**.", ephemeral=True)
+    except ValueError as exc:
+        await interaction.response.send_message(str(exc), ephemeral=True)
+    except Exception as exc:
+        await interaction.response.send_message(fail(exc), ephemeral=True)
+
+
+@bot.tree.command(name="points-set", description="Изменить очки тренировки или практики")
+@app_commands.describe(discord_id="Discord ID игрока", points_type="Тип очков", value="Новое количество")
+@app_commands.choices(points_type=[
+    app_commands.Choice(name="Тренировочные очки", value="points_train"),
+    app_commands.Choice(name="Очки практики", value="points_practice"),
+])
+async def points_set_command(interaction: discord.Interaction, discord_id: str, points_type: app_commands.Choice[str], value: str):
+    if not await guard(interaction):
+        return
+    try:
+        player_id = num(discord_id, "Discord ID", 1, 9223372036854775807)
+        new_value = num(value, "Количество очков", 0, 2_000_000_000)
+        result = db.table("characters").update({points_type.value: new_value}).eq("discord_id", player_id).execute()
+        if not result.data:
+            await interaction.response.send_message("Персонаж не найден.", ephemeral=True)
+            return
+        await interaction.response.send_message(f"{points_type.name} игрока {player_id}: **{new_value}**.", ephemeral=True)
+    except ValueError as exc:
+        await interaction.response.send_message(str(exc), ephemeral=True)
+    except Exception as exc:
+        await interaction.response.send_message(fail(exc), ephemeral=True)
+
 if __name__ == "__main__":
     bot.run(TOKEN)
