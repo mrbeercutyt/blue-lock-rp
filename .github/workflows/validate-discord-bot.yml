@@ -1,0 +1,27 @@
+name: Validate Discord database bot
+
+on:
+  pull_request:
+    paths:
+      - "bot/**"
+      - ".github/workflows/validate-discord-bot.yml"
+  push:
+    branches:
+      - main
+      - migration/read-only-catalog-adapter
+    paths:
+      - "bot/**"
+      - ".github/workflows/validate-discord-bot.yml"
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile Python files
+        run: python -m py_compile bot/main.py
+      - name: Check dependency manifest
+        run: test -s bot/requirements.txt

@@ -1,0 +1,55 @@
+name: Validate catalog migration
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'supabase/functions/**'
+      - 'supabase/migrations/**'
+      - 'docs/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig*.json'
+      - 'vite.config.ts'
+      - '.env.example'
+      - '.github/workflows/validate-catalog.yml'
+  push:
+    branches:
+      - 'migration/read-only-catalog-adapter'
+    paths:
+      - 'src/**'
+      - 'supabase/functions/**'
+      - 'supabase/migrations/**'
+      - 'docs/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig*.json'
+      - 'vite.config.ts'
+      - '.env.example'
+      - '.github/workflows/validate-catalog.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: TypeScript and Vite build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+      - name: Build frontend
+        run: npm run build
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check catalog Edge Function
+        run: deno check supabase/functions/catalog-read/index.ts
