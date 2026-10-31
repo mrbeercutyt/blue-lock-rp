@@ -9,7 +9,7 @@ Python 3.12+ / discord.py manager for the catalog in the existing `blsite` Supab
 3. Configure the environment variables shown in `.env.example` on the host.
 4. Set `DISCORD_BOT_TOKEN`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and at least one `DB_ADMIN_USER_IDS` or `DB_ADMIN_ROLE_IDS` value.
 5. Invite the bot using the `bot` and `applications.commands` scopes. Message Content Intent is not required.
-6. Run from this directory: `python main.py`.
+6. Run from this directory: `python main.py`. For Docker hosting, build from `bot/` and run the image; it starts `python main.py`.
 
 Set `DISCORD_GUILD_ID` while developing to sync commands quickly to one server. Without it, commands sync globally and Discord may take a while to display them.
 
@@ -36,7 +36,7 @@ Character creation/editing, team changes, cost/stat updates, and destructive act
 - Give database management access only to trusted Discord user IDs or roles.
 - The bot uses the same Supabase project as the website. Existing match tables are not modified by the bot.
 - The catalog schema expected by this bot is documented in `supabase/migrations/20261031000200_consolidate_catalog_into_blsite.sql`.
-- Do not run multiple copies with the same token unless you intentionally configure sharding or duplicate workers.
+- `bot/.gitignore` excludes local `.env` and Python artifacts; never commit a real `.env`.\n- A minimal `bot/Dockerfile` is included for hosts that deploy long-running containers.\n- Do not run multiple copies with the same token unless you intentionally configure sharding or duplicate workers.
 
 ## Current launch status
 
