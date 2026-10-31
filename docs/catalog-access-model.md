@@ -1,45 +1,37 @@
 # Catalog access model
 
-## Current state
+## Architecture
 
-The incoming catalog project has RLS enabled on all seven tables but has no direct table policies. The current application authenticates users through Discord OAuth in the existing match/auth Supabase project. The catalog is a separate project, so its `authenticated` role does not automatically receive the current project's session.
+The character/team catalog and tactical-match tables now live in the same owned Supabase project, `blsite`. The additive migration `20261031000200_consolidate_catalog_into_blsite.sql` creates the seven catalog tables without changing existing match/auth tables.
 
-The new `supabase/functions/catalog-read/index.ts` is a server-side, read-only proxy. It validates the incoming session against the existing auth project, extracts a Discord ID only from the provider-issued Discord identity payload (not editable user metadata), then queries the catalog with a server-side key. The frontend adapter calls this function through the existing authenticated client and no longer needs catalog URL/key variables in the browser.
+The browser calls `supabase/functions/catalog-read/index.ts` through the existing authenticated Supabase client. The function validates the session against the same project, derives the Discord ID only from provider-issued Discord identity data (not editable user metadata), and uses the server-side `SUPABASE_SERVICE_ROLE_KEY` to read explicitly allowlisted fields. The service-role key is never sent to the browser.
 
-The function is staged in the repository but is **not deployed**. It will return 503 until these server-side secrets are configured in the existing match/auth Supabase project:
+## Database safety
 
-- `CATALOG_SUPABASE_URL` — URL of the separate catalog project.
-- `CATALOG_SUPABASE_SERVICE_ROLE_KEY` — service-role key for that catalog project; store only as a Supabase Edge Function secret.
+Row Level Security remains enabled on all seven catalog tables, with no broad direct browser policies. The website should not query these tables directly; all catalog access goes through the authenticated Edge Function until a reviewed RLS policy model is in place.
 
-Do not put either value in `VITE_*`, commit it to Git, or send it to the browser. Deploy the function only after the secrets are set. No catalog RLS policies have been disabled or broadened.
+The migration is additive and does not delete or modify existing match records. The old separate catalog project was empty during inspection, so there was no catalog data to copy. Keep that project available until the consolidated schema and application behavior are verified.
 
 ## API visibility
 
-All API actions require a valid signed-in session and a verified provider-issued Discord identity. The API has no write actions.
+All API actions require a valid signed-in session and a provider-issued Discord identity. The API has no write actions.
 
-- `list_characters`: returns a limited set of display names and football stats, not Discord IDs, guild IDs, or training/practice points.
-- `my_character`: returns the current user's character based on the verified Discord ID, including that character's guild ID and points.
+- `list_characters`: returns approved display names and football stats for the caller's Discord guild, without Discord IDs, guild IDs, or training/practice points.
+- `my_character`: returns the caller's own character, including their guild ID and training/practice points.
 - `list_teams`: returns team ID, display name, and creation time only; budgets, owner IDs, and vice-captain IDs are excluded.
-- `my_career_stats`: returns career stats only for the current signed-in user's verified Discord ID.
-- Player costs, offers, transfers, and raw rosters are not exposed by the proxy until their visibility rules are explicitly approved.
+- `my_career_stats`: returns career stats only for the caller's verified Discord ID.
+- Player costs, offers, transfers, budgets, and raw rosters are not exposed yet.
 
-The character directory and team names are visible only to signed-in users through this proxy; they are not publicly accessible without authentication.
+## Discord bot
 
-## Security constraints
+The bot should connect to this same Supabase project using a server-side service-role key stored in the bot host's secret/environment configuration. Its commands must authorize each operation before reading or mutating records. The Discord bot token and Supabase service-role key must never be committed to Git or exposed to the frontend.
 
-- Keep RLS enabled on all catalog tables.
-- Never use the catalog service-role key in browser code.
-- Do not compare `auth.uid()` directly with `characters.discord_id`.
-- Do not trust caller-supplied Discord IDs for personal records; the server derives the ID from the verified OAuth identity.
-- Do not add broad table policies just to make direct browser queries work.
-- Keep all catalog writes disabled while the source catalog is read-only.
+## Deployment and verification
 
-## Deployment checklist
-
-1. Add the two secrets above to the existing match/auth Supabase project's Edge Function secrets.
-2. Deploy `catalog-read` with JWT verification enabled.
-3. Verify a signed-out request returns 401 and a signed-in request with no provider-issued Discord identity returns 403.
-4. Verify the character and career-stat actions can only retrieve the caller's own private record.
-5. Verify the returned team/character fields do not include budgets, offers, costs, or private IDs.
-6. Re-run the frontend build and Supabase Security Advisor before connecting the adapter to visible UI components.
-7. Determine where match boards, participants, permissions, and live training state will live during and after the migration.
+1. Apply the catalog migration to `blsite` (completed for the current project).
+2. Deploy `catalog-read` to the same project with platform JWT verification enabled.
+3. Verify signed-out requests return 401 and sessions without a provider-issued Discord identity return 403.
+4. Verify private character/career queries only return the current user's record.
+5. Verify the character directory is guild-scoped and no response includes budgets, costs, offers, transfers, or private identifiers.
+6. Connect the adapter to visible UI components only after those checks pass.
+7. Build the Discord bot against this schema and test it with a development token before running it on the live server.
