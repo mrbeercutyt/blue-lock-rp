@@ -616,3 +616,6 @@ input::placeholder,textarea::placeholder{color:#63808e!important}
 }
 .pitch-quick-controls button:hover{border-color:var(--cyber-cyan);color:#fff}
 @media(max-width:680px){.pitch-quick-controls{gap:6px}.pitch-quick-controls button{padding:4px 6px;font-size:8px}}
+
+.curved-trajectory{stroke-width:.9;stroke-linecap:round;stroke-dasharray:2.2 1.1}
+.tool-buttons button[title*="дугу"]{border-color:#287083}
