@@ -654,8 +654,8 @@ body:after{
 @media(prefers-reduced-motion:reduce){body:after,.topbar:after{animation:none}}
 
 /* Keep the tactical pitch at a stable readable size; scroll the viewport instead of squeezing it. */
-.pitch-viewport{width:100%;max-width:100%;min-width:0;overflow:auto hidden;overscroll-behavior-x:contain;scrollbar-color:#167c9b #101a22;scrollbar-width:thin}
-.pitch-canvas{width:100%;min-width:0;max-width:100%}
-.pitch-viewport .pitch{display:block;min-width:0;max-width:100%;height:auto;max-height:none;border-radius:3px;touch-action:none;cursor:crosshair;box-sizing:border-box}
-@media(max-width:1050px){.layout{grid-template-columns:220px minmax(0,1fr) 220px}.pitch-canvas{width:100%;min-width:0}}
-@media(max-width:680px){.pitch-viewport{margin:0 -1px}.pitch-canvas{width:100%;min-width:0}.pitch-label{gap:8px;flex-wrap:wrap}.pitch-quick-controls{margin-left:auto}}
+.pitch-viewport{width:100%;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-color:#167c9b #101a22;scrollbar-width:thin}
+.pitch-canvas{width:max(100%,480px);min-width:480px;max-width:none}
+.pitch-viewport .pitch{display:block;width:100%;min-width:0;max-width:none;height:auto;max-height:none;border-radius:3px;touch-action:none;cursor:crosshair;box-sizing:border-box}
+@media(max-width:1050px){.layout{grid-template-columns:220px minmax(0,1fr) 220px}.pitch-canvas{width:480px;min-width:480px}}
+@media(max-width:680px){.pitch-viewport{margin:0 -1px}.pitch-canvas{width:480px;min-width:480px}.pitch-label{gap:8px;flex-wrap:wrap}.pitch-quick-controls{margin-left:auto}}
