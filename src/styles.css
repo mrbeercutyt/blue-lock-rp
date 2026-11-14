@@ -619,3 +619,40 @@ input::placeholder,textarea::placeholder{color:#63808e!important}
 
 .curved-trajectory{stroke-width:.9;stroke-linecap:round;stroke-dasharray:2.2 1.1}
 .tool-buttons button[title*="дугу"]{border-color:#287083}
+
+
+/* === CYAN HEX BACKDROP === */
+body:after{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.52;
+  background:
+    radial-gradient(circle at 50% 50%,rgba(39,220,255,.85) 0 1px,transparent 2px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='156' height='136' viewBox='0 0 156 136'%3E%3Cg fill='none' stroke='%2300cfff' stroke-width='1'%3E%3Cpath d='M26 2 48 15v26L26 54 4 41V15Z M104 2l22 13v26l-22 13-22-13V15Z M65 69l22 13v26l-22 13-22-13V82Z M143 69l22 13v26l-22 13-22-13V82Z' opacity='.7'/%3E%3Cpath d='M48 28h34 M126 28h26 M26 54v15 M87 82h34 M65 121v13' opacity='.55'/%3E%3C/g%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 15% 82%,rgba(0,211,255,.12),transparent 38%),
+    radial-gradient(ellipse at 85% 35%,rgba(40,74,255,.12),transparent 40%);
+  background-size:52px 52px,156px 136px,auto,auto;
+  animation:hex-drift 38s linear infinite,hex-breathe 7s ease-in-out infinite alternate;
+  mask-image:linear-gradient(to bottom,transparent 0%,black 12%,black 92%,transparent 100%);
+}
+.app{position:relative;z-index:1}
+.topbar{isolation:isolate;overflow:hidden}
+.topbar:after{
+  content:"";position:absolute;z-index:-1;pointer-events:none;right:clamp(130px,20vw,320px);top:0;
+  width:190px;height:100%;opacity:.32;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='190' height='66' viewBox='0 0 190 66'%3E%3Cg fill='none' stroke='%2300d9ff' stroke-width='1.2'%3E%3Cpath d='M22 2 40 12v21L22 43 4 33V12Z M76 2l18 10v21L76 43 58 33V12Z M130 2l18 10v21l-18 10-18-10V12Z'/%3E%3Cpath d='M40 22h18 M94 22h18 M148 22h25' opacity='.6'/%3E%3C/g%3E%3C/svg%3E") center/contain no-repeat;
+  animation:hex-breathe 5s ease-in-out infinite alternate;
+}
+.roster,.details{position:relative;isolation:isolate}
+.roster:after,.details:after{
+  content:"";position:absolute;z-index:-1;pointer-events:none;right:8px;top:22px;width:66px;height:58px;opacity:.18;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='66' height='58' viewBox='0 0 66 58'%3E%3Cg fill='none' stroke='%2300d9ff'%3E%3Cpath d='M16 1 30 9v16L16 33 2 25V9Z M50 25l14 8v16l-14 8-14-8V33Z'/%3E%3C/g%3E%3C/svg%3E") center/contain no-repeat;
+}
+@keyframes hex-drift{from{background-position:0 0,0 0,center,center}to{background-position:52px 52px,156px 136px,center,center}}
+@keyframes hex-breathe{from{filter:brightness(.72);opacity:.28}to{filter:brightness(1.45);opacity:.56}}
+@media(prefers-reduced-motion:reduce){body:after,.topbar:after{animation:none}}
+
+/* Keep the tactical pitch at a stable readable size; scroll the viewport instead of squeezing it. */
+.pitch-viewport{width:100%;max-width:100%;overflow:auto hidden;overscroll-behavior-x:contain;scrollbar-color:#167c9b #101a22;scrollbar-width:thin}
+.pitch-canvas{width:max(100%,760px);min-width:760px}
+.pitch{width:100%!important;min-width:760px;max-width:none;display:block;max-height:none!important;margin-left:0!important}
+@media(max-width:1050px){.layout{grid-template-columns:220px minmax(0,1fr) 220px}.pitch-canvas,.pitch{min-width:680px;width:680px!important}}
+@media(max-width:680px){.pitch-viewport{margin:0 -1px}.pitch-canvas,.pitch{min-width:620px;width:620px!important}.pitch-label{gap:8px;flex-wrap:wrap}.pitch-quick-controls{margin-left:auto}}
