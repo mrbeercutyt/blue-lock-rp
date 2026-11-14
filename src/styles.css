@@ -608,3 +608,11 @@ input::placeholder,textarea::placeholder{color:#63808e!important}
 .teams button:hover{border-color:var(--cyber-cyan,#43dcff);color:#e8fbff}
 .scheme-help{display:block;margin:-3px 0 10px;color:#7e9daa;font-size:10px;line-height:1.45}
 .scheme-row button{min-height:34px}
+
+.pitch-quick-controls{display:flex;align-items:center;gap:10px}
+.pitch-quick-controls button{
+  border:1px solid #2b5967;background:#102b38;color:#bcebf3;
+  border-radius:4px;padding:4px 8px;font:700 9px 'Rajdhani',sans-serif;cursor:pointer
+}
+.pitch-quick-controls button:hover{border-color:var(--cyber-cyan);color:#fff}
+@media(max-width:680px){.pitch-quick-controls{gap:6px}.pitch-quick-controls button{padding:4px 6px;font-size:8px}}
