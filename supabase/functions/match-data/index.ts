@@ -18,10 +18,15 @@ function sanitizeArena(value: any) {
   };
 }
 
-const DISCORD_PERMISSION_GUILD_ID = '1384014347654926468';
+const DISCORD_PERMISSION_GUILD_ID = Deno.env.get('DISCORD_GUILD_ID') || '1384014347654926468';
 const DISCORD_CHARACTER_EDITOR_ROLE_IDS = new Set([
   '1424085219811786893',
   '1424085327202619523',
+]);
+// Use the same configurable participant-role allow-list as verify-discord-role.
+const DISCORD_RP_PARTICIPANT_ROLE_IDS = new Set([
+  ...((Deno.env.get('DISCORD_ALLOWED_ROLE_IDS') ?? '').split(',').map((id) => id.trim()).filter(Boolean)),
+  '1424088864917688521',
 ]);
 
 async function hasConfiguredDiscordEditorRole(admin: ReturnType<typeof createClient>, userId: string) {
@@ -151,7 +156,8 @@ Deno.serve(async (req: Request) => {
     if (!userId) return json({ isRegistered: false, isGM: false });
     const roles = await getDiscordMemberRoles(admin, userId);
     const isGM = roles.some((role) => DISCORD_CHARACTER_EDITOR_ROLE_IDS.has(role));
-    return json({ isRegistered: isGM || roles.includes('1424088864917688521'), isGM });
+    const hasParticipantRole = roles.some((role) => DISCORD_RP_PARTICIPANT_ROLE_IDS.has(role));
+    return json({ isRegistered: isGM || hasParticipantRole, isGM, roleCheckConfigured: !!Deno.env.get('DISCORD_BOT_TOKEN') });
   }
 
   if (action === 'verify_gm_role') {
