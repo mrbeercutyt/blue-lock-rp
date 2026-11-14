@@ -29,57 +29,55 @@ const DISCORD_RP_PARTICIPANT_ROLE_IDS = new Set([
   '1424088864917688521',
 ]);
 
-async function hasConfiguredDiscordEditorRole(admin: ReturnType<typeof createClient>, userId: string) {
-  const botToken = Deno.env.get('DISCORD_BOT_TOKEN');
-  if (!botToken) return false;
-  const { data, error } = await admin.auth.admin.getUserById(userId);
-  if (error || !data.user) return false;
-  const identity = data.user.identities?.find((item: any) => item.provider === 'discord');
-  const identityData = (identity as any)?.identity_data ?? {};
-  const metadata = data.user.user_metadata ?? {};
+function resolveDiscordUserId(user: any): string {
+  const identity = user?.identities?.find((item: any) => item.provider === 'discord');
+  const identityData = identity?.identity_data ?? {};
+  const metadata = user?.user_metadata ?? {};
   const candidates = [
     identityData.sub, identityData.user_id, identityData.provider_id, identityData.id,
     metadata.sub, metadata.provider_id, metadata.user_id, metadata.discord_id,
   ];
-  const discordUserId = String(candidates.find((value) => /^\d{17,20}$/.test(String(value ?? ''))) ?? '');
-  if (!discordUserId) return false;
-  try {
-    const response = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_PERMISSION_GUILD_ID}/members/${discordUserId}`, {
-      headers: { Authorization: `Bot ${botToken}` },
-    });
-    if (!response.ok) return false;
-    const member = await response.json();
-    return Array.isArray(member.roles) && member.roles.some((role: string) => DISCORD_CHARACTER_EDITOR_ROLE_IDS.has(role));
-  } catch {
-    return false;
-  }
+  return String(candidates.find((value) => /^\\d{17,20}$/.test(String(value ?? ''))) ?? '');
 }
-async function getDiscordMemberRoles(admin: ReturnType<typeof createClient>, userId: string): Promise<string[]> {
+
+async function fetchDiscordMemberRoles(discordUserId: string): Promise<{ roles: string[]; error?: string; status?: number }> {
   const botToken = Deno.env.get('DISCORD_BOT_TOKEN');
-  if (!botToken) return [];
-  const { data, error } = await admin.auth.admin.getUserById(userId);
-  if (error || !data.user) return [];
-  const identity = data.user.identities?.find((item: any) => item.provider === 'discord');
-  const identityData = (identity as any)?.identity_data ?? {};
-  const metadata = data.user.user_metadata ?? {};
-  const candidates = [
-    identityData.sub, identityData.user_id, identityData.provider_id, identityData.id,
-    metadata.sub, metadata.provider_id, metadata.user_id, metadata.discord_id,
-  ];
-  const discordUserId = String(candidates.find((value) => /^\d{17,20}$/.test(String(value ?? ''))) ?? '');
-  if (!discordUserId) return [];
+  if (!botToken) return { roles: [], error: 'DISCORD_BOT_TOKEN is not configured in Supabase Edge Function secrets' };
+  const guildId = Deno.env.get('DISCORD_GUILD_ID') || DISCORD_PERMISSION_GUILD_ID;
   try {
-    const response = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_PERMISSION_GUILD_ID}/members/${discordUserId}`, {
+    const response = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${discordUserId}`, {
       headers: { Authorization: `Bot ${botToken}` },
     });
-    if (!response.ok) return [];
+    if (!response.ok) {
+      const messages: Record<number, string> = {
+        401: 'Discord rejected the bot token. Update DISCORD_BOT_TOKEN in Supabase secrets after resetting the bot token.',
+        403: 'The bot cannot access this Discord server/member. Check that it is still in the server.',
+        404: 'The signed-in Discord account is not a member of the configured server, or the server ID is incorrect.',
+      };
+      return { roles: [], status: response.status, error: messages[response.status] ?? `Discord API returned HTTP ${response.status}` };
+    }
     const member = await response.json();
-    return Array.isArray(member.roles) ? member.roles.map((role: unknown) => String(role)) : [];
+    return { roles: Array.isArray(member.roles) ? member.roles.map((role: unknown) => String(role)) : [] };
   } catch {
-    return [];
+    return { roles: [], error: 'Could not reach the Discord API from the Supabase Edge Function' };
   }
 }
 
+async function hasConfiguredDiscordEditorRole(admin: ReturnType<typeof createClient>, userId: string) {
+  const { data, error } = await admin.auth.admin.getUserById(userId);
+  if (error || !data.user) return false;
+  const discordUserId = resolveDiscordUserId(data.user);
+  if (!discordUserId) return false;
+  const result = await fetchDiscordMemberRoles(discordUserId);
+  return result.roles.some((role) => DISCORD_CHARACTER_EDITOR_ROLE_IDS.has(role));
+}
+async function getDiscordMemberRoles(admin: ReturnType<typeof createClient>, userId: string): Promise<{ roles: string[]; error?: string; status?: number; discordIdFound: boolean }> {
+  const { data, error } = await admin.auth.admin.getUserById(userId);
+  if (error || !data.user) return { roles: [], error: 'Could not load the signed-in Supabase user', discordIdFound: false };
+  const discordUserId = resolveDiscordUserId(data.user);
+  if (!discordUserId) return { roles: [], error: 'Discord user ID is missing from the linked account identity. Sign out and sign in with Discord again.', discordIdFound: false };
+  return { ...await fetchDiscordMemberRoles(discordUserId), discordIdFound: true };
+}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: cors });
@@ -154,10 +152,11 @@ Deno.serve(async (req: Request) => {
 
   if (action === 'verify_character_registration') {
     if (!userId) return json({ isRegistered: false, isGM: false });
-    const roles = await getDiscordMemberRoles(admin, userId);
+    const roleResult = await getDiscordMemberRoles(admin, userId);
+    const roles = roleResult.roles;
     const isGM = roles.some((role) => DISCORD_CHARACTER_EDITOR_ROLE_IDS.has(role));
     const hasParticipantRole = roles.some((role) => DISCORD_RP_PARTICIPANT_ROLE_IDS.has(role));
-    return json({ isRegistered: isGM || hasParticipantRole, isGM, roleCheckConfigured: !!Deno.env.get('DISCORD_BOT_TOKEN') });
+    return json({ isRegistered: isGM || hasParticipantRole, isGM, roleCheckConfigured: !!Deno.env.get('DISCORD_BOT_TOKEN'), roleCheckError: roleResult.error ?? null, discordHttpStatus: roleResult.status ?? null, discordIdFound: roleResult.discordIdFound });
   }
 
   if (action === 'verify_gm_role') {
