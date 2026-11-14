@@ -659,3 +659,5 @@ body:after{
 .pitch-viewport .pitch{display:block;width:100%;min-width:0;max-width:none;height:auto;max-height:none;border-radius:3px;touch-action:none;cursor:crosshair;box-sizing:border-box}
 @media(max-width:1050px){.layout{grid-template-columns:220px minmax(0,1fr) 220px}.pitch-canvas{width:480px;min-width:480px}}
 @media(max-width:680px){.pitch-viewport{margin:0 -1px}.pitch-canvas{width:480px;min-width:480px}.pitch-label{gap:8px;flex-wrap:wrap}.pitch-quick-controls{margin-left:auto}}
+
+.discord-gm-badge{display:inline-flex;align-items:center;margin-left:8px;padding:2px 7px;border:1px solid rgba(94,234,212,.55);border-radius:5px;color:#5eead4;font-size:.68em;font-weight:900;letter-spacing:.08em;line-height:1.4;vertical-align:middle}
