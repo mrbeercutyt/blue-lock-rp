@@ -37,7 +37,7 @@ function resolveDiscordUserId(user: any): string {
     identityData.sub, identityData.user_id, identityData.provider_id, identityData.id,
     metadata.sub, metadata.provider_id, metadata.user_id, metadata.discord_id,
   ];
-  return String(candidates.find((value) => /^\\d{17,20}$/.test(String(value ?? ''))) ?? '');
+  return String(candidates.find((value) => /^\d{17,20}$/.test(String(value ?? ''))) ?? '');
 }
 
 async function fetchDiscordMemberRoles(discordUserId: string): Promise<{ roles: string[]; error?: string; status?: number }> {
@@ -341,7 +341,7 @@ Deno.serve(async (req: Request) => {
     const discordUserId = String([
       identityData.sub, identityData.user_id, identityData.provider_id, identityData.id,
       metadata.sub, metadata.provider_id, metadata.user_id, metadata.discord_id,
-    ].find((value) => /^\\d{17,20}$/.test(String(value ?? ''))) ?? '');
+    ].find((value) => /^\d{17,20}$/.test(String(value ?? ''))) ?? '');
     let detectedTeam: 'blue' | 'red' | null = null;
     if (botToken && discordUserId && config) {
       for (const teamName of ['blue', 'red'] as const) {
