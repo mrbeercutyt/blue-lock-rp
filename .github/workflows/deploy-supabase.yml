@@ -37,10 +37,5 @@ jobs:
             exit 1
           fi
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v2
-        with:
-          version: latest
-
       - name: Deploy Edge Functions
-        run: supabase functions deploy --project-ref "$SUPABASE_PROJECT_ID" --yes
+        run: npx --yes supabase@latest functions deploy --project-ref "$SUPABASE_PROJECT_ID" --yes
