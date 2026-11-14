@@ -344,12 +344,15 @@
 .global-modal-head small{color:var(--green);font-size:9px;letter-spacing:.14em;font-weight:800}
 .global-modal-head h2{margin:3px 0 0;font-size:23px}
 .global-modal-head .icon{font-size:22px}
-.official-match-row{display:flex;width:100%;align-items:center;justify-content:space-between;gap:14px;padding:14px 12px;margin:7px 0;border:1px solid var(--line);border-radius:9px;background:#1b231c;color:#edf4e9;text-align:left;cursor:pointer}
+.official-match-row{display:flex;width:100%;align-items:stretch;gap:8px;padding:5px;margin:7px 0;border:1px solid var(--line);border-radius:9px;background:#1b231c;color:#edf4e9}
 .official-match-row:hover{border-color:var(--green);background:#222e22}
-.official-match-row span{display:grid;gap:5px;min-width:0}
-.official-match-row b{font-size:13px}
-.official-match-row small{color:var(--muted);font-size:10px}
-.official-match-row strong{color:var(--green);font-size:10px;white-space:nowrap}
+.official-match-open{display:flex;flex:1;min-width:0;align-items:center;justify-content:space-between;gap:14px;padding:9px 7px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
+.official-match-open span{display:grid;gap:5px;min-width:0}
+.official-match-open b{font-size:13px}
+.official-match-open small{color:var(--muted);font-size:10px}
+.official-match-open strong{color:var(--green);font-size:10px;white-space:nowrap}
+.official-match-remove{flex:0 0 34px;align-self:center;width:34px;height:34px;border:1px solid #754047;border-radius:8px;background:#351d22;color:#ff8b93;font-size:22px;line-height:1;cursor:pointer}
+.official-match-remove:hover{background:#57242b;border-color:#ff6875;color:#fff}
 .empty-official{padding:26px 10px;text-align:center;color:var(--muted);font-size:12px}
 .official-refresh{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:#202a20;color:var(--green);cursor:pointer}
 .notification-popover{position:fixed;right:18px;top:76px;z-index:220;width:min(350px,calc(100vw - 24px));padding:14px;background:#151a16;border:1px solid #465744;border-radius:12px;box-shadow:0 18px 60px #000b}
